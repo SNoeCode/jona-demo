@@ -2,7 +2,7 @@ import { Resume, ResumeComparison } from "@/types/user/resume";
 export interface Job {
   id: string;
   title: string;
-  company?: string;
+  company: string;
   job_location?: string;
   job_state?: string;
   salary?: string;
