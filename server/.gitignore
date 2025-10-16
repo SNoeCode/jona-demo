@@ -1,0 +1,41 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+*.tmp
+
+# Build Output
+dist/
+build/
+
+# Next.js (if used server-side)
+.next/
+out/
+
+# Tailwind CSS
+.tailwind-cache/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+tsconfig.tsbuildinfo
+
+# Editor Configs
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-*
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+job_data/

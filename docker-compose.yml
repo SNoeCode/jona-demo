@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+    command: npm run dev
+    env_file:
+      - ./client/.env.local
+    depends_on:
+      server:
+        condition: service_healthy
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - ./server/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    env_file:
+      - ./n8n/.env
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    profiles:
+      - automation
+services:
+  client:
+    # existing client config...
+
+  server:
+    # existing server config...
+
+  n8n:
+    # existing n8n config...
+
+  supabase:
+    image: supabase/postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: supabase
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+
+volumes:
+  n8n_data:
+  supabase_data:
+
