@@ -1,6 +1,7 @@
-// // client\src\app\(protected)\admin\dashboard\page.tsx
-// "use client";
-'use server'
+// client/src/app/(protected)/admin/dashboard/page.tsx
+
+"use server";
+
 import { AdminDashboard } from "@/components/adminDashboard/AdminDashboard";
 import { requireAdminAuth } from "@/lib/supabase/auth-server";
 import {
@@ -9,13 +10,14 @@ import {
 } from "@/app/services/server-admin/admin-server";
 import { getAllUsers } from "@/services/admin/admin_users";
 import { mapToAdminDashboardStats } from "@/helpers/dashboardStats";
-import { AdminDashboardStats } from "@/types/admin";
+import type { AdminDashboardStats } from "@/types/admin";
 import type { Job } from "@/types/user";
 import type { AdminUser } from "@/types/admin";
 import type { FilterOptions } from "@/types/admin";
 import type { AuthUser } from "@/types/user/authUser";
 import type { JobApplication } from "@/types/user/application";
 import type { Resume } from "@/types/user/resume";
+
 export interface AdminDashboardProps {
   initialJobs: Job[];
   initialUsers: AdminUser[];
@@ -23,8 +25,9 @@ export interface AdminDashboardProps {
   initialFilters: FilterOptions;
   user: AuthUser;
   role: "admin";
-  applications: JobApplication[]; // ✅ required
+  applications: JobApplication[];
 }
+
 export default async function AdminPage() {
   const authUser = await requireAdminAuth();
 
@@ -35,31 +38,38 @@ export default async function AdminPage() {
   const jobParams = { search: "", status: "open", limit, offset };
   const userParams = { search: "", limit, offset };
 
-  const [statsRaw, jobs, users] = await Promise.all([
+  const [statsRaw, jobsRaw, usersRaw] = await Promise.all([
     getDashboardStats(),
-    getAllJobs(),
+    getAllJobs(jobParams),
     getAllUsers(userParams),
   ]);
 
-  // If you have applications and resumes, fetch and pass them here
   const applications: JobApplication[] = [];
   const resumes: Resume[] = [];
+
   const initialStats = mapToAdminDashboardStats(
     statsRaw,
     applications,
     resumes,
-    users,
-    jobs
+    usersRaw,
+    jobsRaw
   );
 
   const initialFilters: FilterOptions = { status: "open" };
+
+  // ✅ Sanitize all props before passing to Client Component
+  const safeJobs = JSON.parse(JSON.stringify(jobsRaw));
+  const safeUsers = JSON.parse(JSON.stringify(usersRaw));
+  const safeStats = JSON.parse(JSON.stringify(initialStats));
+  const safeUser = JSON.parse(JSON.stringify(authUser));
+
   return (
     <AdminDashboard
-      initialJobs={jobs}
-      initialUsers={users}
-      initialStats={initialStats}
+      initialJobs={safeJobs}
+      initialUsers={safeUsers}
+      initialStats={safeStats}
       initialFilters={initialFilters}
-      user={authUser}
+      user={safeUser}
       role="admin"
       applications={applications}
     />

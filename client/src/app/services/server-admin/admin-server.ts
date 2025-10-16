@@ -34,11 +34,11 @@ export interface AdminDashboardStats extends BaseDashboardStats {
   activeSubscriptions: number;
   churnRate: number;
   averageRevenuePerUser: number;
-  
+
   planDistribution: {
     free: number;
     pro: number;
-   enterprise: number;
+    enterprise: number;
   };
 }
 export interface AdminDashboardProps {
@@ -87,50 +87,57 @@ export async function getDashboardStats(): Promise<AdminDashboardStats> {
 
   const avgMatchScore =
     matchScores.length > 0
-      ? Math.round(matchScores.reduce((sum, score) => sum + score, 0) / matchScores.length)
+      ? Math.round(
+          matchScores.reduce((sum, score) => sum + score, 0) /
+            matchScores.length
+        )
       : 0;
-return {
-  totalJobs: jobs.length,
-  appliedJobs: jobs.filter((job) => job.applied).length,
-  savedJobs: jobs.filter((job) => job.saved).length,
-  pendingJobs: jobs.filter((job) => job.status === "pending").length,
-  interviewJobs: jobs.filter((job) => job.status === "interview").length,
-  offerJobs: jobs.filter((job) => job.status === "offer").length,
-  rejectedJobs: jobs.filter((job) => job.status === "rejected").length,
-  matchRate: matchScores.length > 0 ? Math.round((avgMatchScore / 100) * 100) : 0,
-  matchScore: avgMatchScore,
-  totalUsers: users.length,
-  activeUsers: users.length,
-  totalResumes: resumes.length,
-  avgMatchScore,
-  totalApplications: applications.length,
+  return {
+    totalJobs: jobs.length,
+    appliedJobs: jobs.filter((job) => job.applied).length,
+    savedJobs: jobs.filter((job) => job.saved).length,
+    pendingJobs: jobs.filter((job) => job.status === "pending").length,
+    interviewJobs: jobs.filter((job) => job.status === "interview").length,
+    offerJobs: jobs.filter((job) => job.status === "offer").length,
+    rejectedJobs: jobs.filter((job) => job.status === "rejected").length,
+    matchRate:
+      matchScores.length > 0 ? Math.round((avgMatchScore / 100) * 100) : 0,
+    matchScore: avgMatchScore,
+    totalUsers: users.length,
+    activeUsers: users.length,
+    totalResumes: resumes.length,
+    avgMatchScore,
+    totalApplications: applications.length,
 
-  // ✅ Stubbed admin-only metrics
-  totalRevenue: 0,
-  monthlyRecurringRevenue: 0,
-  activeSubscriptions: 0,
-  churnRate: 0,
-  averageRevenuePerUser: 0,
-  planDistribution: {
-    free: 0,
-    pro: 0,
-    enterprise: 0,
-  },
-}
+    // ✅ Stubbed admin-only metrics
+    totalRevenue: 0,
+    monthlyRecurringRevenue: 0,
+    activeSubscriptions: 0,
+    churnRate: 0,
+    averageRevenuePerUser: 0,
+    planDistribution: {
+      free: 0,
+      pro: 0,
+      enterprise: 0,
+    },
+  };
 }
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "/api/admin";
 
 // Helper to get authenticated Supabase client
 async function getAuthenticatedClient() {
   const supabase = createServerComponentClient({ cookies });
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
   if (error || !user) {
     throw new Error("Unauthorized: No authenticated user");
   }
 
   const authUser = toAuthUser(user);
-  
+
   // Check if user is admin
   const { data: profile } = await supabase
     .from("user_profiles")
@@ -161,14 +168,16 @@ export async function getJobById(id: string): Promise<Job | null> {
 
   return data;
 }
-
-export async function getAllJobs(): Promise<Job[]> {
+export async function getAllJobs(params?: {
+  search?: string;
+  status?: string | null;
+  limit?: number;
+  offset?: number;
+}) {
   try {
     const supabase = await getSupabaseAdmin();
 
-    const { data, error } = await supabase
-      .from("jobs")
-      .select("*");
+    const { data, error } = await supabase.from("jobs").select("*");
 
     if (error) {
       console.error("Error fetching jobs:", error.message);
@@ -181,7 +190,6 @@ export async function getAllJobs(): Promise<Job[]> {
     return [];
   }
 }
-
 
 export async function getJob(jobId: string): Promise<AdminJob> {
   const job = await getJobById(jobId);
@@ -223,7 +231,7 @@ export const logAdminAction = async (
   } catch (err) {
     console.error("Failed to log admin action to Supabase:", err);
   }
-}
+};
 
 export async function updateJob(
   id: string,
@@ -243,10 +251,10 @@ export async function updateJob(
     console.error("Error updating job:", error);
     throw error;
   }
-if (!user) {
-  console.error("No authenticated user found");
-  return null; // or throw new Error("User not authenticated");
-}
+  if (!user) {
+    console.error("No authenticated user found");
+    return null; // or throw new Error("User not authenticated");
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -260,7 +268,6 @@ if (!user) {
   return data;
 }
 
-
 export async function deleteJob(id: string): Promise<boolean> {
   const { supabase, user } = await getAuthenticatedClient();
 
@@ -269,8 +276,8 @@ export async function deleteJob(id: string): Promise<boolean> {
   const { error } = await supabase.from("jobs").delete().eq("id", id);
 
   if (!user) {
-  throw new Error("User not authenticated");
-}
+    throw new Error("User not authenticated");
+  }
 
   if (error) {
     console.error("Error deleting job:", error);
@@ -303,9 +310,9 @@ export async function createJob(jobData: Partial<Job>): Promise<AdminJob> {
     console.error("Error creating job:", error);
     throw error;
   }
-if (!user) {
-  throw new Error("User not authenticated");
-}
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -379,7 +386,8 @@ export async function getAllUsers(): Promise<AdminUser[]> {
     const enhancedUsers: AdminUser[] = (usersData || []).map((user: any) => {
       const profile = profilesData?.find((p: any) => p.id === user.id);
       const applicationCount =
-        applicationCounts?.filter((a: any) => a.user_id === user.id).length || 0;
+        applicationCounts?.filter((a: any) => a.user_id === user.id).length ||
+        0;
       const resumeCount =
         resumeCounts?.filter((r: any) => r.user_id === user.id).length || 0;
 
@@ -491,9 +499,9 @@ export async function updateUser(
     console.error("Error updating user:", error);
     throw error;
   }
-if (!user) {
-  throw new Error("User not authenticated");
-}
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
 
   await logAdminAction(
     user.id,
@@ -519,9 +527,9 @@ export async function deleteUser(id: string): Promise<boolean> {
     console.error("Error deleting user:", error);
     throw error;
   }
-if (!user) {
-  throw new Error("User not authenticated");
-}
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -624,9 +632,9 @@ export async function deleteResume(id: string): Promise<boolean> {
     console.error("Error deleting resume:", error);
     throw error;
   }
-if (!user) {
-  throw new Error("User not authenticated");
-}
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -657,10 +665,8 @@ export async function getSubscriptionStats(): Promise<AdminSubscriptionStats> {
     console.error("Error fetching subscription data:", error);
     throw error;
   }
-
-  const Subscriptions: AdminSubscriptionData[] = (
-    subscriptions || []
-  ).map((sub: any) => ({
+const Subscriptions: AdminSubscriptionData[] = (subscriptions || []).map(
+  (sub: any) => ({
     user_id: sub.user_id,
     user_name: sub.user_profiles?.full_name || "Unknown",
     user_email: sub.user_profiles?.email || "Unknown",
@@ -676,7 +682,11 @@ export async function getSubscriptionStats(): Promise<AdminSubscriptionStats> {
       current_period_start: sub.current_period_start,
       current_period_end: sub.current_period_end,
       plan: sub.plan ?? null,
-     stripe_subscription_id: sub.stripe_subscription_id ?? "",
+      stripe_subscription_id: sub.stripe_subscription_id ?? "",
+      // Add these three missing properties:
+      cancel_at_period_end: sub.cancel_at_period_end ?? false,
+      stripe_customer_id: sub.stripe_customer_id ?? null,
+      updated_at: sub.updated_at ?? sub.created_at, // fallback to created_at if not available
     },
     payment_history: sub.payment_history || [],
     total_paid:
@@ -687,7 +697,38 @@ export async function getSubscriptionStats(): Promise<AdminSubscriptionStats> {
       ) || 0,
     last_payment_date: sub.payment_history?.[0]?.payment_date || null,
     usage: sub.user_usage || [],
-  }));
+  })
+);
+  // const Subscriptions: AdminSubscriptionData[] = (subscriptions || []).map(
+  //   (sub: any) => ({
+  //     user_id: sub.user_id,
+  //     user_name: sub.user_profiles?.full_name || "Unknown",
+  //     user_email: sub.user_profiles?.email || "Unknown",
+  //     subscription: {
+  //       id: sub.id,
+  //       user_id: sub.user_id,
+  //       plan_id: sub.plan?.id ?? "",
+  //       status: sub.status,
+  //       billing_cycle: sub.billing_cycle,
+  //       price_paid: sub.price_paid,
+  //       created_at: sub.created_at,
+  //       canceled_at: sub.canceled_at,
+  //       current_period_start: sub.current_period_start,
+  //       current_period_end: sub.current_period_end,
+  //       plan: sub.plan ?? null,
+  //       stripe_subscription_id: sub.stripe_subscription_id ?? "",
+  //     },
+  //     payment_history: sub.payment_history || [],
+  //     total_paid:
+  //       sub.payment_history?.reduce(
+  //         (sum: number, payment: any) =>
+  //           payment.status === "succeeded" ? sum + payment.amount : sum,
+  //         0
+  //       ) || 0,
+  //     last_payment_date: sub.payment_history?.[0]?.payment_date || null,
+  //     usage: sub.user_usage || [],
+  //   })
+  // );
 
   const totalRevenue = Subscriptions.reduce(
     (sum, sub) => sum + sub.total_paid,
@@ -723,29 +764,32 @@ export async function getSubscriptionStats(): Promise<AdminSubscriptionStats> {
       : 0;
 
   const averageRevenuePerUser =
-    activeSubscriptions > 0
-      ? monthlyRecurringRevenue / activeSubscriptions
-      : 0;
+    activeSubscriptions > 0 ? monthlyRecurringRevenue / activeSubscriptions : 0;
 
-  const planDistribution: { [key: string]: number; free: number; pro: number; enterprise: number } = {
+  const planDistribution: {
+    [key: string]: number;
+    free: number;
+    pro: number;
+    enterprise: number;
+  } = {
     free: 0,
     pro: 0,
     enterprise: 0,
   };
-  
+
   Subscriptions.forEach((sub) => {
     const planName = sub.subscription.plan?.name?.toLowerCase() || "unknown";
     planDistribution[planName] = (planDistribution[planName] || 0) + 1;
   });
 
   return {
-  totalRevenue,
-  monthlyRecurringRevenue,
-  activeSubscriptions,
-  churnRate,
-  averageRevenuePerUser,
-  planDistribution,
-  payment_history: Subscriptions.flatMap(sub => sub.payment_history || []), // ✅ added
+    totalRevenue,
+    monthlyRecurringRevenue,
+    activeSubscriptions,
+    churnRate,
+    averageRevenuePerUser,
+    planDistribution,
+    payment_history: Subscriptions.flatMap((sub) => sub.payment_history || []), // ✅ added
   };
 }
 
@@ -830,8 +874,7 @@ export async function getSubscriptions(
   }
   if (plan !== "all") {
     filteredSubscriptions = filteredSubscriptions.filter(
-      (sub) =>
-        sub.subscription.plan?.name?.toLowerCase() === plan.toLowerCase()
+      (sub) => sub.subscription.plan?.name?.toLowerCase() === plan.toLowerCase()
     );
   }
 
@@ -850,7 +893,9 @@ export async function getSubscriptions(
   };
 }
 
-export async function cancelSubscription(subscriptionId: string): Promise<void> {
+export async function cancelSubscription(
+  subscriptionId: string
+): Promise<void> {
   const { supabase, user } = await getAuthenticatedClient();
 
   const { error } = await supabase
@@ -865,9 +910,9 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
     console.error("Error canceling subscription:", error);
     throw error;
   }
-if (!user) {
-  throw new Error("User not authenticated");
-}
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -896,9 +941,9 @@ export async function refundSubscription(
     console.error("Error processing refund:", error);
     throw error;
   }
-if (!user) {
-  throw new Error("User not authenticated");
-}
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -914,7 +959,9 @@ if (!user) {
 // SCRAPING LOGS
 // ===================
 
-export async function getScrapingLogs(limit: number = 50): Promise<ScrapingLog[]> {
+export async function getScrapingLogs(
+  limit: number = 50
+): Promise<ScrapingLog[]> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase
@@ -978,19 +1025,16 @@ export async function updateScrapingLog(
 export async function bulkDeleteJobs(ids: string[]): Promise<boolean> {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const { error } = await supabase
-    .from("jobs")
-    .delete()
-    .in("id", ids);
+  const { error } = await supabase.from("jobs").delete().in("id", ids);
 
   if (error) {
     console.error("Error bulk deleting jobs:", error);
     throw error;
   }
-if (!user) {
-  console.error("No authenticated user found");
-  return false;
-}
+  if (!user) {
+    console.error("No authenticated user found");
+    return false;
+  }
   await logAdminAction(
     user.id,
     user.email || "",
@@ -1029,23 +1073,21 @@ export async function bulkUpdateJobStatus(
     console.error("Error bulk updating job status:", error);
     throw error;
   }
-if (!user) {
-  console.error("No authenticated user found");
-  return false;
-}
+  if (!user) {
+    console.error("No authenticated user found");
+    return false;
+  }
 
-// Now safe to use:
-await logAdminAction(
-  user.id,
-  user.email || "",
-  "bulk_update",
-  "jobs",
-  ids.join(","),
-  { status, count: ids.length },
-  null
-);
-
-
+  // Now safe to use:
+  await logAdminAction(
+    user.id,
+    user.email || "",
+    "bulk_update",
+    "jobs",
+    ids.join(","),
+    { status, count: ids.length },
+    null
+  );
 
   return true;
 }
@@ -1054,7 +1096,10 @@ await logAdminAction(
 // UTILITY FUNCTIONS
 // ===================
 
-export async function searchJobs(query: string, limit: number = 50): Promise<Job[]> {
+export async function searchJobs(
+  query: string,
+  limit: number = 50
+): Promise<Job[]> {
   const { supabase } = await getAuthenticatedClient();
 
   const { data, error } = await supabase

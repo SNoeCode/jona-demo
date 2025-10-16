@@ -1,34 +1,36 @@
-// app/services/admin/admin_users.ts - Fixed with proper types
-'use server'
-import { EnhancedUserProfile } from "@/types/user/index";
+'use server';
+
+import { EnhancedUserProfile } from "@/types/user";
 import { supabase } from "@/lib/supabaseClient";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { AdminUser } from "@/types/admin/admin_authuser";
-import { AdminUserCreat}
 import { getAdminBaseURL } from "@/services/base";
-// import { SubscriptionService } from "@/services/user-services/subscription-service";
 import { toAuthUser, AuthUser } from "@/types/user";
-import {  AdminEnhancedUserProfile } from "@/types/admin/admin_profile";
+import { AdminEnhancedUserProfile } from "@/types/admin/admin_profile";
 import { getCurrentSubscription } from "@/app/actions/getCurrentSubscription";
+import { verifyUser } from "@/app/actions/verifyUser";
 
 // Helper function to convert AuthUser to AdminUser
-function convertToAdminUser(user: AuthUser, additionalData: {
-  profile?: any;
-  applications?: number;
-  resumes?: number;
-}): AdminUser {
+function convertToAdminUser(
+  user: AuthUser,
+  additionalData: {
+    profile?: any;
+    applications?: number;
+    resumes?: number;
+  }
+): AdminUser {
   const { profile, applications = 0, resumes = 0 } = additionalData;
-  
+verifyUser(user.id);
   const rawType = user.app_metadata?.subscription_type;
   const subscription_type: "free" | "pro" | "enterprise" =
-    rawType === "enterprise" ? "enterprise" :
-    rawType === "pro" ? "pro" : "free";
-
-  // Remove verifyUser from user object to match AdminUser interface
-  const { verifyUser, ...userWithoutVerify } = user;
+    rawType === "enterprise"
+      ? "enterprise"
+      : rawType === "pro"
+      ? "pro"
+      : "free";
 
   const adminUser: AdminUser = {
-    ...userWithoutVerify,
+    ...user,
     full_name: profile?.full_name || user.user_metadata?.full_name || "N/A",
     email: user.email || "Unknown",
     joined_date: profile?.created_at || user.created_at,
@@ -41,92 +43,32 @@ function convertToAdminUser(user: AuthUser, additionalData: {
     location: profile?.location || user.user_metadata?.location || "Unknown",
     is_active: !!user.last_sign_in_at,
     subscription_status: "active",
-    plan_name: typeof user.app_metadata?.plan_name === "string" 
-      ? user.app_metadata.plan_name 
-      : "free",
+    plan_name:
+      typeof user.app_metadata?.plan_name === "string"
+        ? user.app_metadata.plan_name
+        : "free",
     total_jobs_scraped: 0,
     total_applications: applications,
-    user_profiles: profile || null,
   };
 
   return adminUser;
 }
 
-// export async function getAllUsers(): Promise<AdminUser[]> {
-//   const supabaseAdmin = await getSupabaseAdmin();
-
-//   try {
-//     // Use getUser() instead of session for security
-//     const { data: authUsers, error } = await supabaseAdmin.auth.admin.listUsers();
-//     if (error || !authUsers?.users) {
-//       console.error("Error fetching auth users:", error);
-//       throw error;
-//     }
-
-//     // Get profiles with error handling
-//     const { data: profilesData, error: profilesError } = await supabaseAdmin
-//       .from("user_profiles")
-//       .select("*");
-    
-//     if (profilesError) {
-//       console.warn("Error fetching profiles:", profilesError);
-//     }
-
-//     // Get application counts with error handling
-//     const { data: applicationCountsData, error: appError } = await supabaseAdmin
-//       .from("user_job_status")
-//       .select("user_id")
-//       .eq("applied", true);
-    
-//     if (appError) {
-//       console.warn("Error fetching application counts:", appError);
-//     }
-
-//     // Fixed: Use admin client to bypass RLS and only select existing columns
-//     const { data: resumeCountsData, error: resumeError } = await supabaseAdmin
-//       .from("resumes")
-//       .select("user_id, id"); // Only select columns that definitely exist
-    
-//     if (resumeError) {
-//       console.warn("Error fetching resume counts:", resumeError);
-//     }
-
-//     const profileMap = new Map(profilesData?.map((p) => [p.id, p]) || []);
-    
-//     // Process users and filter out nulls properly
-//     const adminUsers: AdminUser[] = [];
-    
-//     for (const rawUser of authUsers.users) {
-//       const user = toAuthUser(rawUser);
-//       if (!user) continue;
-
-//       const profile = profileMap.get(user.id);
-//       const applications = applicationCountsData?.filter((a) => a.user_id === user.id).length || 0;
-//       const resumes = resumeCountsData?.filter((r) => r.user_id === user.id).length || 0;
-
-//       const adminUser = convertToAdminUser(user, { profile, applications, resumes });
-//       adminUsers.push(adminUser);
-//     }
-    
-//     return adminUsers;
-      
-//   } catch (error) {
-//     console.error("Error in getAllUsers:", error);
-//     throw new Error("Failed to fetch users: " + (error instanceof Error ? error.message : String(error)));
-//   }
-// }
-export async function getAllUsers(filters?: { search?: string; status?: string }): Promise<AdminUser[]> {
+export async function getAllUsers(filters?: {
+  search?: string;
+  status?: string;
+}): Promise<AdminUser[]> {
   const supabaseAdmin = await getSupabaseAdmin();
   const { search, status } = filters || {};
 
   try {
-    const { data: authUsers, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authUsers, error } =
+      await supabaseAdmin.auth.admin.listUsers();
     if (error || !authUsers?.users) {
       console.error("Error fetching auth users:", error);
       throw error;
     }
 
-    // Build profile query with filters
     let profileQuery = supabaseAdmin.from("user_profiles").select("*");
 
     if (search) {
@@ -142,18 +84,18 @@ export async function getAllUsers(filters?: { search?: string; status?: string }
       console.warn("Error fetching profiles:", profilesError);
     }
 
-    const { data: applicationCountsData, error: appError } = await supabaseAdmin
-      .from("user_job_status")
-      .select("user_id")
-      .eq("applied", true);
+    const { data: applicationCountsData, error: appError } =
+      await supabaseAdmin
+        .from("user_job_status")
+        .select("user_id")
+        .eq("applied", true);
 
     if (appError) {
       console.warn("Error fetching application counts:", appError);
     }
 
-    const { data: resumeCountsData, error: resumeError } = await supabaseAdmin
-      .from("resumes")
-      .select("user_id, id");
+    const { data: resumeCountsData, error: resumeError } =
+      await supabaseAdmin.from("resumes").select("user_id, id");
 
     if (resumeError) {
       console.warn("Error fetching resume counts:", resumeError);
@@ -167,24 +109,35 @@ export async function getAllUsers(filters?: { search?: string; status?: string }
       if (!user) continue;
 
       const profile = profileMap.get(user.id);
-      const applications = applicationCountsData?.filter((a) => a.user_id === user.id).length || 0;
-      const resumes = resumeCountsData?.filter((r) => r.user_id === user.id).length || 0;
+      const applications =
+        applicationCountsData?.filter((a) => a.user_id === user.id).length || 0;
+      const resumes =
+        resumeCountsData?.filter((r) => r.user_id === user.id).length || 0;
 
-      const adminUser = convertToAdminUser(user, { profile, applications, resumes });
+      const adminUser = convertToAdminUser(user, {
+        profile,
+        applications,
+        resumes,
+      });
       adminUsers.push(adminUser);
     }
 
     return adminUsers;
   } catch (error) {
     console.error("Error in getAllUsers:", error);
-    throw new Error("Failed to fetch users: " + (error instanceof Error ? error.message : String(error)));
+    throw new Error(
+      "Failed to fetch users: " +
+        (error instanceof Error ? error.message : String(error))
+    );
   }
 }
+
 export async function getUserById(id: string): Promise<AdminUser | null> {
   const supabaseAdmin = await getSupabaseAdmin();
 
   try {
-    const { data: rawUser, error } = await supabaseAdmin.auth.admin.getUserById(id);
+    const { data: rawUser, error } =
+      await supabaseAdmin.auth.admin.getUserById(id);
     if (error || !rawUser?.user) return null;
 
     const user = toAuthUser(rawUser.user);
@@ -197,7 +150,6 @@ export async function getUserById(id: string): Promise<AdminUser | null> {
         .select("id", { count: "exact" })
         .eq("user_id", id)
         .eq("applied", true),
-      // Fixed: Only select essential columns
       supabaseAdmin
         .from("resumes")
         .select("id", { count: "exact" })
@@ -209,18 +161,19 @@ export async function getUserById(id: string): Promise<AdminUser | null> {
     const resumes = resumeCount.count || 0;
 
     return convertToAdminUser(user, { profile, applications, resumes });
-    
   } catch (error) {
     console.error("Error in getUserById:", error);
     return null;
   }
 }
- export async function getAdminEnhancedUserProfile(
+
+export async function getAdminEnhancedUserProfile(
   userId: string
 ): Promise<AdminEnhancedUserProfile> {
   const supabaseAdmin = await getSupabaseAdmin();
 
-  const { data: rawUser, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+  const { data: rawUser, error } =
+    await supabaseAdmin.auth.admin.getUserById(userId);
   if (error || !rawUser?.user) throw error || new Error("User not found");
 
   const user = toAuthUser(rawUser.user);
@@ -243,6 +196,12 @@ export async function getUserById(id: string): Promise<AdminUser | null> {
     .select("user_id")
     .eq("user_id", userId);
 
+  const rawType = user.app_metadata?.subscription_type;
+  const subscription_type =
+    rawType === "free" || rawType === "pro" || rawType === "enterprise"
+      ? rawType
+      : "free";
+
   return {
     ...user,
     full_name: profile?.full_name || user.user_metadata?.full_name || "N/A",
@@ -253,9 +212,9 @@ export async function getUserById(id: string): Promise<AdminUser | null> {
     applications_sent: applicationCountData?.length || 0,
     resumes_uploaded: resumeCountData?.length || 0,
     profile_completed: !!profile?.full_name,
-    subscription_type: user.app_metadata?.subscription_type || "free",
+    subscription_type,
     location: profile?.location || user.user_metadata?.location || "Unknown",
-  } as AdminEnhancedUserProfile;
+  };
 }
 
 export async function getEnhancedUserProfile(
@@ -282,27 +241,6 @@ export async function getEnhancedUserProfile(
   };
 }
 
-// export async function updateUserProfile(
-//   userId: string,
-//   updates: Partial<EnhancedUserProfile>
-// ): Promise<EnhancedUserProfile> {
-//   const { data, error } = await supabase
-//     .from("user_profiles")
-//     .update({
-//       ...updates,
-//       updated_at: new Date().toISOString(),
-//     })
-//     .eq("id", userId)
-//     .select()
-//     .single();
-
-//   if (error) {
-//     console.error("Error updating user profile:", error);
-//     throw error;
-//   }
-
-//   return data;
-// }
 export async function getUserUsage(userId: string) {
   const { data, error } = await supabase
     .from("user_usage")
@@ -317,42 +255,6 @@ export async function getUserUsage(userId: string) {
 
   return data;
 }
-
-// export async function exportUsers(
-//   format: "csv" | "json" | "xlsx" = "csv"
-// ): Promise<void> {
-//   try {
-//     const baseURL = await getAdminBaseURL();
-//     const response = await fetch(`${baseURL}/export/users?format=${format}`);
-//     if (response.ok) {
-//       const blob = await response.blob();
-//       const url = window.URL.createObjectURL(blob);
-//       const a = document.createElement("a");
-//       a.href = url;
-//       a.download = `users_export.${format}`;
-//       document.body.appendChild(a);
-//       a.click();
-//       window.URL.revokeObjectURL(url);
-//       document.body.removeChild(a);
-//       return;
-//     }
-//   } catch (error) {
-//     console.warn("API endpoint unavailable, falling back to CSV generation");
-//   }
-
-//   const csvContent = await exportUsersToCSV();
-//   const blob = new Blob([csvContent], { type: "text/csv" });
-//   const url = window.URL.createObjectURL(blob);
-//   const a = document.createElement("a");
-//   a.href = url;
-//   a.download = `users_export.csv`;
-//   document.body.appendChild(a);
-//   a.click();
-//   window.URL.revokeObjectURL(url);
-//   document.body.removeChild(a);
-// }
-
-
 export async function updateUser(
   userId: string,
   updates: Partial<AdminUser>

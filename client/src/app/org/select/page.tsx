@@ -32,7 +32,7 @@ export default function OrganizationSelectPage() {
   const [error, setError] = useState<string | null>(null);
 
   const selectOrganization = useCallback(
-    async (orgId: string) => {
+    async (orgId: string, orgSlug: string) => {
       setSelectedOrg(orgId);
       setError(null);
 
@@ -40,6 +40,7 @@ export default function OrganizationSelectPage() {
         const response = await fetch("/api/user/update-current-org", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ organizationId: orgId }),
         });
 
@@ -48,7 +49,9 @@ export default function OrganizationSelectPage() {
         if (response.ok) {
           // Small delay to ensure session is updated
           await new Promise(resolve => setTimeout(resolve, 300));
-          router.push("/org/dashboard");
+          
+          // ✅ FIXED: Navigate to the correct org dashboard using slug
+          router.push(`/org/${orgSlug}/dashboard`);
         } else {
           setError(data.message || "Failed to select organization");
           setSelectedOrg(null);
@@ -67,7 +70,9 @@ export default function OrganizationSelectPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/org/user-organizations");
+      const response = await fetch("/api/org/user-organizations", {
+        credentials: "include"
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -79,8 +84,10 @@ export default function OrganizationSelectPage() {
         return;
       }
 
+      // ✅ FIXED: If only one org, select it and route to its dashboard
       if (data.organizations.length === 1) {
-        await selectOrganization(data.organizations[0].organization_id);
+        const org = data.organizations[0];
+        await selectOrganization(org.organization_id, org.organization_slug);
         return;
       }
 
@@ -152,7 +159,7 @@ export default function OrganizationSelectPage() {
           {organizations.map((org) => (
             <div
               key={org.organization_id}
-              onClick={() => selectOrganization(org.organization_id)}
+              onClick={() => selectOrganization(org.organization_id, org.organization_slug)}
               className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 ${
                 selectedOrg === org.organization_id
                   ? "border-blue-500 ring-2 ring-blue-200 opacity-75"
@@ -207,7 +214,7 @@ export default function OrganizationSelectPage() {
                   className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium text-sm flex items-center"
                   onClick={(e) => {
                     e.stopPropagation();
-                    selectOrganization(org.organization_id);
+                    selectOrganization(org.organization_id, org.organization_slug);
                   }}
                   disabled={selectedOrg === org.organization_id}
                 >
@@ -227,7 +234,7 @@ export default function OrganizationSelectPage() {
                     className="text-gray-600 hover:text-gray-700 dark:text-gray-400"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/org/settings?id=${org.organization_id}`);
+                      router.push(`/org/${org.organization_slug}/settings`);
                     }}
                   >
                     <Settings className="h-4 w-4" />

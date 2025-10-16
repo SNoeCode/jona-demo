@@ -206,252 +206,506 @@ const fetchUsers = useCallback(async () => {
     }
   }, [filteredUsers, selectedUsers]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+//   if (loading) {
+//     return (
+//       <div className="flex items-center justify-center py-12">
+//         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+//       </div>
+//     );
+//   }
 
+//   return (
+//     <div className="space-y-6">
+//       {/* Header */}
+//       <div className="flex items-center justify-between">
+//         <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
+//         <div className="flex items-center space-x-3">
+//           {selectedUsers.length > 0 && (
+//             <button
+//               onClick={handleBulkDelete}
+//               className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+//             >
+//               <Trash2 className="w-4 h-4 mr-2" />
+//               Delete Selected ({selectedUsers.length})
+//             </button>
+//           )}
+//           <button
+//             onClick={fetchUsers}
+//             disabled={loading}
+//             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+//           >
+//             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+//             Refresh
+//           </button>
+//         </div>
+//       </div>
+
+//       {/* Error Display */}
+//       {error && (
+//         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+//           {error}
+//         </div>
+//       )}
+
+//       {/* Search and Filter */}
+//       <div className="flex flex-col sm:flex-row gap-4">
+//         <div className="relative flex-1">
+//           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+//           <input
+//             type="text"
+//             placeholder="Search users by name or email..."
+//             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//             value={searchTerm}
+//             onChange={(e) => setSearchTerm(e.target.value)}
+//           />
+//         </div>
+//         <div className="flex items-center gap-2">
+//           <Filter className="h-4 w-4 text-gray-400" />
+//           <select
+//             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//             value={filterStatus}
+//             onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+//           >
+//             <option value="all">All Status</option>
+//             <option value="active">Active</option>
+//             <option value="inactive">Inactive</option>
+//           </select>
+//         </div>
+//       </div>
+
+//       {/* Users Stats */}
+//       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+//         <div className="bg-white p-4 rounded-lg shadow border">
+//           <div className="text-2xl font-bold text-gray-900">
+//             {filteredUsers.length}
+//           </div>
+//           <div className="text-sm text-gray-600">Total Users</div>
+//         </div>
+//         <div className="bg-white p-4 rounded-lg shadow border">
+//           <div className="text-2xl font-bold text-green-600">
+//             {filteredUsers.filter((u) => u.status === "active").length}
+//           </div>
+//           <div className="text-sm text-gray-600">Active Users</div>
+//         </div>
+//         <div className="bg-white p-4 rounded-lg shadow border">
+//           <div className="text-2xl font-bold text-yellow-600">
+//             {
+//               filteredUsers.filter((u) => u.subscription_type === "enterprise")
+//                 .length
+//             }
+//           </div>
+//           <div className="text-sm text-gray-600">Enterprise Users</div>
+//         </div>
+//         <div className="bg-white p-4 rounded-lg shadow border">
+//           <div className="text-2xl font-bold text-blue-600">
+//             {filteredUsers.reduce(
+//               (sum, u) => sum + (u.applications_sent || 0),
+//               0
+//             )}
+//           </div>
+//           <div className="text-sm text-gray-600">Total Applications</div>
+//         </div>
+//       </div>
+
+//       {/* Users Table */}
+//       <div className="bg-white border rounded-lg overflow-hidden">
+//         <div className="overflow-x-auto">
+//           <table className="min-w-full divide-y divide-gray-200">
+//             <thead className="bg-gray-50">
+//               <tr>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   <input
+//                     type="checkbox"
+//                     checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+//                     onChange={handleSelectAll}
+//                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+//                   />
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   User
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Contact Info
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Activity
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Status
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Subscription
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Actions
+//                 </th>
+//               </tr>
+//             </thead>
+//             <tbody className="bg-white divide-y divide-gray-200">
+//               {filteredUsers.map((userRecord) => (
+//                 <tr key={userRecord.id} className="hover:bg-gray-50">
+//                   <td className="px-6 py-4">
+//                     <input
+//                       type="checkbox"
+//                       checked={selectedUsers.includes(userRecord.id)}
+//                       onChange={(e) => handleUserSelect(userRecord.id, e.target.checked)}
+//                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+//                     />
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     <div className="flex items-center">
+//                       <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+//                         <User className="w-5 h-5 text-gray-600" />
+//                       </div>
+//                       <div className="ml-4">
+//                         <div className="font-medium text-gray-900">
+//                           {userRecord.full_name || userRecord.full_name || "N/A"}
+//                         </div>
+//                         <div className="text-sm text-gray-500">
+//                           ID: {userRecord.id.slice(0, 8)}...
+//                         </div>
+//                       </div>
+//                     </div>
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     <div className="space-y-1">
+//                       <div className="flex items-center text-sm text-gray-900">
+//                         <Mail className="w-4 h-4 mr-1 text-gray-400" />
+//                         {userRecord.email || "N/A"}
+//                       </div>
+//                       {userRecord.location && userRecord.location !== "N/A" && (
+//                         <div className="flex items-center text-sm text-gray-500">
+//                           <MapPin className="w-4 h-4 mr-1 text-gray-400" />
+//                           {userRecord.location}
+//                         </div>
+//                       )}
+//                     </div>
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     <div className="space-y-1">
+//                       <div className="flex items-center text-sm text-gray-900">
+//                         <Send className="w-4 h-4 mr-1 text-gray-400" />
+//                         {userRecord.applications_sent || 0} applications
+//                       </div>
+//                       <div className="flex items-center text-sm text-gray-500">
+//                         <FileText className="w-4 h-4 mr-1 text-gray-400" />
+//                         {userRecord.resumes_uploaded || 0} resumes
+//                       </div>
+//                       <div className="flex items-center text-sm text-gray-500">
+//                         <Calendar className="w-4 h-4 mr-1 text-gray-400" />
+//                         Joined {formatDate(userRecord.joined_date)}
+//                       </div>
+//                     </div>
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     {getStatusBadge(userRecord.status)}
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     {getSubscriptionBadge(userRecord.subscription_type)}
+//                   </td>
+//                   <td className="px-6 py-4">
+//                     <div className="flex items-center space-x-2">
+//                       <button
+//                         onClick={() => router.push(`/admin/users/${userRecord.id}`)}
+//                         className="text-gray-400 hover:text-gray-600"
+//                         title="View details"
+//                       >
+//                         <Eye className="w-4 h-4" />
+//                       </button>
+//                       <Link href={`/admin/users/${userRecord.id}`}>Edit</Link>
+//                       {/* <button
+//                         onClick={() => router.push(`/admin/users/${userRecord.id}`)}
+//                         className="text-gray-400 hover:text-gray-600"
+//                         title="Edit user"
+//                       >
+//                         <Edit className="w-4 h-4" />
+//                       </button> */}
+//                       <button
+//                         onClick={() => handleDeleteUser(userRecord.id)}
+//                         className="text-red-400 hover:text-red-600"
+//                         title="Delete user"
+//                       >
+//                         <Trash2 className="w-4 h-4" />
+//                       </button>
+//                     </div>
+//                   </td>
+//                 </tr>
+//               ))}
+//             </tbody>
+//           </table>
+//         </div>
+//       </div>
+
+//       {/* Empty State */}
+//       {filteredUsers.length === 0 && !loading && (
+//         <div className="text-center py-12">
+//           <div className="w-12 h-12 mx-auto mb-4 text-gray-400">
+//             <Users className="w-full h-full" />
+//           </div>
+//           <h3 className="text-lg font-medium text-gray-900 mb-1">
+//             No users found
+//           </h3>
+//           <p className="text-gray-500">
+//             {searchTerm || filterStatus !== "all"
+//               ? "Try adjusting your search or filter criteria."
+//               : "Users will appear here once they register."}
+//           </p>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+if (loading) {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-        <div className="flex items-center space-x-3">
-          {selectedUsers.length > 0 && (
-            <button
-              onClick={handleBulkDelete}
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Selected ({selectedUsers.length})
-            </button>
-          )}
-          <button
-            onClick={fetchUsers}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search users by name or email..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-400" />
-          <select
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Users Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-gray-900">
-            {filteredUsers.length}
-          </div>
-          <div className="text-sm text-gray-600">Total Users</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-green-600">
-            {filteredUsers.filter((u) => u.status === "active").length}
-          </div>
-          <div className="text-sm text-gray-600">Active Users</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-yellow-600">
-            {
-              filteredUsers.filter((u) => u.subscription_type === "enterprise")
-                .length
-            }
-          </div>
-          <div className="text-sm text-gray-600">Enterprise Users</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-blue-600">
-            {filteredUsers.reduce(
-              (sum, u) => sum + (u.applications_sent || 0),
-              0
-            )}
-          </div>
-          <div className="text-sm text-gray-600">Total Applications</div>
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                    onChange={handleSelectAll}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact Info
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Activity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subscription
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((userRecord) => (
-                <tr key={userRecord.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.includes(userRecord.id)}
-                      onChange={(e) => handleUserSelect(userRecord.id, e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="font-medium text-gray-900">
-                          {userRecord.full_name || userRecord.full_name || "N/A"}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {userRecord.id.slice(0, 8)}...
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Mail className="w-4 h-4 mr-1 text-gray-400" />
-                        {userRecord.email || "N/A"}
-                      </div>
-                      {userRecord.location && userRecord.location !== "N/A" && (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                          {userRecord.location}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Send className="w-4 h-4 mr-1 text-gray-400" />
-                        {userRecord.applications_sent || 0} applications
-                      </div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <FileText className="w-4 h-4 mr-1 text-gray-400" />
-                        {userRecord.resumes_uploaded || 0} resumes
-                      </div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar className="w-4 h-4 mr-1 text-gray-400" />
-                        Joined {formatDate(userRecord.joined_date)}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(userRecord.status)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {getSubscriptionBadge(userRecord.subscription_type)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => router.push(`/admin/users/${userRecord.id}`)}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="View details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <Link href={`/admin/users/${userRecord.id}`}>Edit</Link>
-                      {/* <button
-                        onClick={() => router.push(`/admin/users/${userRecord.id}`)}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="Edit user"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button> */}
-                      <button
-                        onClick={() => handleDeleteUser(userRecord.id)}
-                        className="text-red-400 hover:text-red-600"
-                        title="Delete user"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Empty State */}
-      {filteredUsers.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <div className="w-12 h-12 mx-auto mb-4 text-gray-400">
-            <Users className="w-full h-full" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">
-            No users found
-          </h3>
-          <p className="text-gray-500">
-            {searchTerm || filterStatus !== "all"
-              ? "Try adjusting your search or filter criteria."
-              : "Users will appear here once they register."}
-          </p>
-        </div>
-      )}
+    <div className="flex items-center justify-center py-12">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]"></div>
     </div>
   );
-};
+}
+
+return (
+  <div className="space-y-4 sm:space-y-6">
+    {/* Header - Responsive */}
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <h1 className="text-xl sm:text-2xl font-bold text-[#1B3A57] dark:text-white">
+        Users Management
+      </h1>
+      <div className="flex items-center space-x-3 w-full sm:w-auto">
+        {selectedUsers.length > 0 && (
+          <button
+            onClick={handleBulkDelete}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Delete Selected ({selectedUsers.length})</span>
+            <span className="sm:hidden">Delete ({selectedUsers.length})</span>
+          </button>
+        )}
+        <button
+          onClick={fetchUsers}
+          disabled={loading}
+          className="flex-1 sm:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-[#FF6B35] hover:bg-[#FF5722] dark:bg-[#FF8C5A] dark:hover:bg-[#FF6B35] text-white rounded-lg transition-colors disabled:opacity-50 text-sm shadow-md"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    {/* Error Display */}
+    {error && (
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm">
+        {error}
+      </div>
+    )}
+
+    {/* Search and Filter - Responsive */}
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search users..."
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent text-sm"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Filter className="h-4 w-4 text-gray-400 flex-shrink-0" />
+        <select
+          className="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent text-sm"
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    {/* Users Stats - Responsive Grid */}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="text-xl sm:text-2xl font-bold text-[#1B3A57] dark:text-white">
+          {filteredUsers.length}
+        </div>
+        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Users</div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="text-xl sm:text-2xl font-bold text-green-600">
+          {filteredUsers.filter((u) => u.status === "active").length}
+        </div>
+        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Active Users</div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="text-xl sm:text-2xl font-bold text-[#FF6B35]">
+          {filteredUsers.filter((u) => u.subscription_type === "enterprise").length}
+        </div>
+        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Pro Users</div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="text-xl sm:text-2xl font-bold text-[#00A6A6]">
+          {filteredUsers.reduce((sum, u) => sum + (u.applications_sent || 0), 0)}
+        </div>
+        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Applications</div>
+      </div>
+    </div>
+
+    {/* Users Table - Responsive */}
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-lg">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                  onChange={handleSelectAll}
+                  className="h-4 w-4 text-[#FF6B35] focus:ring-[#FF6B35] border-gray-300 rounded"
+                />
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                User
+              </th>
+              <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Contact Info
+              </th>
+              <th className="hidden lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Activity
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="hidden xl:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Subscription
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {filteredUsers.map((userRecord) => (
+              <tr key={userRecord.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <td className="px-4 sm:px-6 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.includes(userRecord.id)}
+                    onChange={(e) => handleUserSelect(userRecord.id, e.target.checked)}
+                    className="h-4 w-4 text-[#FF6B35] focus:ring-[#FF6B35] border-gray-300 rounded"
+                  />
+                </td>
+                <td className="px-4 sm:px-6 py-4">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#FF6B35]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#FF6B35]" />
+                    </div>
+                    <div className="ml-3 sm:ml-4">
+                      <div className="font-medium text-gray-900 dark:text-white text-sm">
+                        {userRecord.full_name || "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px] sm:max-w-none">
+                        {userRecord.email || "N/A"}
+                      </div>
+                      {/* Show activity stats on mobile */}
+                      <div className="lg:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {userRecord.applications_sent || 0} apps
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="hidden md:table-cell px-4 sm:px-6 py-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center text-sm text-gray-900 dark:text-white">
+                      <Mail className="w-4 h-4 mr-1 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{userRecord.email || "N/A"}</span>
+                    </div>
+                    {userRecord.location && userRecord.location !== "N/A" && (
+                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                        <MapPin className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{userRecord.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="hidden lg:table-cell px-4 sm:px-6 py-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center text-xs text-gray-900 dark:text-white">
+                      <Send className="w-3 h-3 mr-1 text-gray-400" />
+                      {userRecord.applications_sent || 0} applications
+                    </div>
+                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                      <FileText className="w-3 h-3 mr-1 text-gray-400" />
+                      {userRecord.resumes_uploaded || 0} resumes
+                    </div>
+                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                      <Calendar className="w-3 h-3 mr-1 text-gray-400" />
+                      {formatDate(userRecord.joined_date)}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 sm:px-6 py-4">
+                  {getStatusBadge(userRecord.status)}
+                  {/* Show subscription on mobile */}
+                  <div className="xl:hidden mt-1">
+                    {getSubscriptionBadge(userRecord.subscription_type)}
+                  </div>
+                </td>
+                <td className="hidden xl:table-cell px-4 sm:px-6 py-4">
+                  {getSubscriptionBadge(userRecord.subscription_type)}
+                </td>
+                <td className="px-4 sm:px-6 py-4">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => router.push(`/admin/users/${userRecord.id}`)}
+                      className="text-[#00A6A6] hover:text-[#008B8B] transition-colors"
+                      title="View details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <Link 
+                      href={`/admin/users/${userRecord.id}`}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      title="Edit user"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={() => handleDeleteUser(userRecord.id)}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                      title="Delete user"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* Empty State */}
+    {filteredUsers.length === 0 && !loading && (
+      <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="w-12 h-12 mx-auto mb-4 text-gray-400">
+          <Users className="w-full h-full" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+          No users found
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 text-sm px-4">
+          {searchTerm || filterStatus !== "all"
+            ? "Try adjusting your search or filter criteria."
+            : "Users will appear here once they register."}
+        </p>
+      </div>
+    )}
+  </div>
+);
+}

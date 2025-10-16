@@ -7,6 +7,7 @@ import Footer from '@/components/footer/Footer';
 import './globals.css';
 import { AuthUser } from '@/types/user';
 import NavbarWrapper from '@/helpers/NavWrapper';
+import { SessionMonitor } from '@/components/SessionMonitor';
 interface NavbarProps {
   user?: AuthUser;
   onLogoutAction?: () => void;
@@ -24,11 +25,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <AuthUserProvider>
+            <SessionMonitor>
+
             {/* <SessionTimeoutProvider> */}
               <NavbarWrapper />
               <main className="min-h-screen">{children}</main>
               <Footer />
             {/* </SessionTimeoutProvider> */}
+            </SessionMonitor>
           </AuthUserProvider>
         </ThemeProvider>
       </body>

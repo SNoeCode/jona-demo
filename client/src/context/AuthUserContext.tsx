@@ -266,14 +266,57 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
       return { user: null, error: err as Error };
     }
   }, [checkUser]);
-
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+const signOut = useCallback(async () => {
+  try {
+    console.log('🔴 Starting logout process...');
+    
+    // Clear the Supabase session
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('❌ Supabase signOut error:', error);
+      // Continue with logout even if there's an error
+    } else {
+      console.log('✅ Supabase session cleared');
+    }
+    
+    // Clear local state
     setUser(null);
     setAuthUser(null);
     setOrganization(null);
+    
+    // Clear any cached data
+    localStorage.clear(); // or be more selective with what you clear
+    
+    console.log('🔄 Redirecting to login...');
+    
+    // Force navigation to login
     router.push("/login");
-  }, [router]);
+    
+    // Force a hard refresh to ensure all state is cleared
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
+    
+  } catch (err) {
+    console.error('❌ Logout exception:', err);
+    
+    // Force logout anyway
+    setUser(null);
+    setAuthUser(null);
+    setOrganization(null);
+    
+    // Force redirect even on error
+    window.location.href = '/login';
+  }
+}, [router]);
+  // const signOut = useCallback(async () => {
+  //   await supabase.auth.signOut();
+  //   setUser(null);
+  //   setAuthUser(null);
+  //   setOrganization(null);
+  //   router.push("/login");
+  // }, [router]);
 
   const switchOrganization = useCallback(async (orgId: string) => {
     try {
