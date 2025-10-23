@@ -68,8 +68,6 @@ export default function SubscriptionTab({
 
     setLoading(true);
     try {
-      // This would need to be implemented - create a portal session
-      // For now, just show a message
       alert("Subscription management portal coming soon!");
     } catch (err) {
       setError("Failed to open subscription management");
@@ -119,7 +117,7 @@ export default function SubscriptionTab({
 
     return Object.values(plan.features);
   };
-// *****************sunscri[tion]
+
   return (
     <div className="space-y-8">
       {/* Current Subscription */}

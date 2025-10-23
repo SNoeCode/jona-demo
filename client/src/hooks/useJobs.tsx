@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient"; // Adjust the import path as necessary
+import { supabase } from "../lib/supabaseClient";
 import type { Job } from "../types/user/index";
 
 const LOCAL_STORAGE_KEY = "user_jobs_cache";

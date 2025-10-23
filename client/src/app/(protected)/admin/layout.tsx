@@ -20,8 +20,6 @@ export default async function AdminLayout({
     role: session?.user?.user_metadata?.role,
   });
 
-  // Let middleware handle the heavy lifting
-  // This is just a safety check
   if (!session) {
     console.log('❌ No session in admin layout, redirecting to login');
     redirect('/login?redirect=/admin/dashboard');

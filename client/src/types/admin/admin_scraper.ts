@@ -43,6 +43,8 @@ export interface ScraperRequest extends ScraperConfig {
   admin_user_id?: string;
   admin_email?: string;
   admin_notes?: string;
+  headless: boolean;
+  skip_captcha: boolean;
 }
 
 export interface ScraperRegistry {
@@ -67,6 +69,7 @@ export interface ScraperResponse {
 export interface ScrapingResult {
   scraper: string;
   result: ScraperResponse;
+  logId?: string| null
 }
 
 // ─────────────────────────────────────────────────────────────

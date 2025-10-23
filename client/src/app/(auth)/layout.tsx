@@ -1,10 +1,11 @@
+// jona-demo\client\src\app\(auth)\layout.tsx
 'use client';
 import { useAuth } from '@/context/AuthUserContext';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { loading } = useAuth();
 
-  // Don't block rendering - let middleware handle redirects
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {loading ? (

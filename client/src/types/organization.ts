@@ -9,20 +9,16 @@ export type SubscriptionStatus =
   | "past_due"
   | "trialing"
   | "paused";
-
-// Use this for organization membership roles only
 export type OrgRole = "org_admin" | "org_manager" | "org_user";
-
-// Use this for app-wide user roles
 export type UserRole =
-  | "admin"           // System admin - FIRST in hierarchy
-  | "tenant_owner"    // Tenant owner
-  | "org_admin"       // Org admin
-  | "org_manager"     // Org manager
-  | "org_user"        // Org member
-  | "recruiter"       // Recruiter
-  | "unassigned_user" // No org
-  | "user";           // Default
+  | "admin"
+  | "tenant_owner"
+  | "org_admin"
+  | "org_manager"
+  | "org_user"
+  | "recruiter"
+  | "unassigned_user"
+  | "user";
 
 export interface Organization {
   id: string;
@@ -160,15 +156,13 @@ export interface UserWithOrganization {
   email: string;
   role: UserRole;
   current_organization_id?: string;
-  is_admin?: boolean;              // ADDED
+  is_admin?: boolean; // ADDED
   is_org_owner?: boolean;
   is_tenant_owner?: boolean;
   current_organization?: Organization;
   organization_members?: OrganizationMember[];
   owned_tenants?: Tenant[];
 }
-
-// Organization context for components
 export interface OrganizationContext {
   organization: Organization;
   membership: OrganizationMember;
@@ -186,19 +180,18 @@ export interface AuthUser {
     full_name?: string;
     role?: string;
     name?: string;
-    is_admin?: boolean;              // ADDED
+    is_admin?: boolean; // ADDED
     is_org_owner?: boolean;
     is_tenant_owner?: boolean;
     current_organization_id?: string;
   };
   current_organization_id?: string;
-  is_admin?: boolean;                // ADDED
+  is_admin?: boolean;
   is_org_owner?: boolean;
   is_tenant_owner?: boolean;
   organizations?: OrganizationMember[];
 }
 
-// Access control helper - UPDATED
 export function canAccessOrganization(
   userRole: UserRole,
   userOrgId?: string,
@@ -208,31 +201,21 @@ export function canAccessOrganization(
   isAdmin?: boolean,
   isTenantOwner?: boolean
 ): boolean {
-  // System admin can access everything
   if (isAdmin) {
     return true;
   }
-
-  // Tenant owner can access all orgs in their tenant
   if (isTenantOwner || userRole === "tenant_owner") {
     return userTenantId === targetTenantId;
   }
-
-  // Org roles need matching org ID
   if (["org_admin", "org_manager", "org_user"].includes(userRole)) {
     return userOrgId === targetOrgId;
   }
-
-  // Recruiter can access their org
   if (userRole === "recruiter") {
     return userOrgId === targetOrgId;
   }
-
-  // Unassigned users and regular users cannot access orgs
   return false;
 }
 
-// Helper to check if user can manage organization
 export function canManageOrganization(
   userRole: UserRole,
   isAdmin?: boolean,
@@ -243,15 +226,12 @@ export function canManageOrganization(
   if (isOrgOwner || userRole === "org_admin") return true;
   return false;
 }
-
-// Helper to check if user can view organization data
 export function canViewOrganizationData(
   userRole: UserRole,
   isAdmin?: boolean,
   isTenantOwner?: boolean
 ): boolean {
   if (isAdmin) return true;
-  // Tenant owner can see org data but NOT user data
   if (isTenantOwner) return true;
   if (["org_admin", "org_manager"].includes(userRole)) return true;
   return false;

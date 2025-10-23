@@ -1,7 +1,24 @@
-// utils/roleUtils.ts
 import type { UserRole, OrgRole } from "@/types/organization";
 import type { AuthUser } from "@/types/user/authUser";
 
+const ROLE_HIERARCHY: UserRole[] = [
+  'admin',
+  'tenant_owner',
+  'org_admin',
+  'org_manager',
+  'org_user',
+  'recruiter',
+  'unassigned_user',
+  'user',
+]
+
+interface UserRoleData {
+  is_admin?: boolean
+  is_tenant_owner?: boolean
+  organizations?: Array<{
+    role: string
+  }>
+}
 export function normalizeAppRole(raw?: string): UserRole {
   if (!raw) return "unassigned_user";
   
@@ -34,110 +51,115 @@ export function normalizeAppRole(raw?: string): UserRole {
       return "unassigned_user";
   }
 }
-
-export function getPrimaryRole(user: {
-  role?: UserRole;
-  organizations?: Array<{ role: OrgRole | "recruiter" }>;
-  is_admin?: boolean;
-  is_tenant_owner?: boolean;
-}): UserRole {
-  // System admin has highest priority
-  if (user.is_admin) {
-    return "admin";
-  }
-  
-  // Tenant owner second
-  if (user.is_tenant_owner) {
-    return "tenant_owner";
-  }
-  
-  if (user.organizations && user.organizations.length > 0) {
-    const roles = user.organizations.map((org) => org.role);
-    
-    // Return highest priority org role
-    if (roles.includes("org_admin")) return "org_admin";
-    if (roles.includes("org_manager")) return "org_manager";
-    if (roles.includes("org_user")) return "org_user";
-    if (roles.includes("recruiter")) return "recruiter";
-  }
-  
-  return user.role ?? "user";
+interface UserRoleData {
+  is_admin?: boolean
+  is_tenant_owner?: boolean
+  organizations?: Array<{
+    role: string
+  }>
 }
 
-export function hasRoleOrHigher(userRole: UserRole, requiredRole: UserRole): boolean {
-  const hierarchy: UserRole[] = [
-    "admin",
-    "tenant_owner",
-    "org_admin",
-    "org_manager",
-    "org_user",
-    "recruiter",
-    "unassigned_user",
-    "user",
-  ];
-  
-  const userIndex = hierarchy.indexOf(userRole);
-  const requiredIndex = hierarchy.indexOf(requiredRole);
-  
-  return userIndex !== -1 && requiredIndex !== -1 && userIndex <= requiredIndex;
-}
-
-export function isAdminRole(role: UserRole): boolean {
-  return role === "admin" || role === "tenant_owner";
-}
-
-export function isOrgRole(role: UserRole): boolean {
-  return ["org_admin", "org_manager", "org_user"].includes(role);
-}
-
-export function getRoleDisplayName(role: UserRole): string {
-  const displayNames: Record<UserRole, string> = {
-    admin: "System Admin",
-    tenant_owner: "Tenant Owner",
-    org_admin: "Organization Admin",
-    org_manager: "Organization Manager",
-    org_user: "Organization User",
-    recruiter: "Recruiter",
-    unassigned_user: "Unassigned User",
-    user: "User",
-  };
-  
-  return displayNames[role] || role;
-}
-
-export function canTransitionRole(
-  fromRole: UserRole,
-  toRole: UserRole,
-  actorRole: UserRole
-): boolean {
-  // Only admins can assign admin roles
-  if ((toRole === "admin" || toRole === "tenant_owner") && actorRole !== "admin") {
-    return false;
+export function getPrimaryRole(userData: UserRoleData): UserRole {
+  if (userData.is_admin) {
+    return 'admin'
   }
-  
-  // Tenant owners can assign any non-admin role
-  if (actorRole === "tenant_owner" && toRole !== "admin") {
-    return true;
+
+  if (userData.is_tenant_owner) {
+    return 'tenant_owner'
   }
-  
-  if (actorRole === "org_admin") {
-    return isOrgRole(toRole) || toRole === "recruiter" || toRole === "user";
+
+  if (userData.organizations && userData.organizations.length > 0) {
+    const orgRoles = userData.organizations.map(org => org.role)
+    if (orgRoles.includes('admin')) return 'org_admin'
+    if (orgRoles.includes('manager')) return 'org_manager'
+    if (orgRoles.includes('recruiter')) return 'recruiter'
+    if (orgRoles.includes('member')) return 'org_user'
   }
-  
-  // Others cannot assign roles
-  return false;
+  return 'unassigned_user'
 }
 
-export function requireAdmin(user: AuthUser | null) {
-  if (!user || user.role !== "admin") {
-    throw new Error("Admin access required");
+export function getAllRoles(userData: UserRoleData): UserRole[] {
+  const roles: UserRole[] = []
+
+  if (userData.is_admin) {
+    roles.push('admin')
   }
-  return true;
+
+  if (userData.is_tenant_owner) {
+    roles.push('tenant_owner')
+  }
+
+  if (userData.organizations && userData.organizations.length > 0) {
+    const orgRoles = userData.organizations.map(org => org.role)
+
+    if (orgRoles.includes('admin')) roles.push('org_admin')
+    if (orgRoles.includes('manager')) roles.push('org_manager')
+    if (orgRoles.includes('recruiter')) roles.push('recruiter')
+    if (orgRoles.includes('member')) roles.push('org_user')
+  }
+
+  if (roles.length === 0) {
+    roles.push('unassigned_user')
+  }
+
+  return roles
 }
 
-export function requireTenantOwner(user: AuthUser | null) {
-  if (!user || (user.role !== "admin" && !user.is_tenant_owner)) {
-    throw new Error("Tenant owner access required");
+export function hasHigherOrEqualRole(userRole: UserRole, requiredRole: UserRole): boolean {
+  const userIndex = ROLE_HIERARCHY.indexOf(userRole)
+  const requiredIndex = ROLE_HIERARCHY.indexOf(requiredRole)
+  
+  return userIndex <= requiredIndex
+}
+
+export function hasRole(userRoles: UserRole[], role: UserRole): boolean {
+  return userRoles.includes(role)
+}
+
+export function hasAnyRole(userRoles: UserRole[], roles: UserRole[]): boolean {
+  return roles.some(role => userRoles.includes(role))
+}
+
+export function hasAllRoles(userRoles: UserRole[], roles: UserRole[]): boolean {
+  return roles.every(role => userRoles.includes(role))
+}
+
+export function getDefaultRouteForRole(role: UserRole, orgSlug?: string): string {
+  switch (role) {
+    case 'admin':
+      return '/admin/dashboard'
+    case 'tenant_owner':
+      return '/tenant/dashboard'
+    case 'org_admin':
+    case 'org_manager':
+    case 'org_user':
+      return orgSlug ? `/org/${orgSlug}/dashboard` : '/dashboard'
+    case 'recruiter':
+      return orgSlug ? `/org/${orgSlug}/recruit` : '/recruit'
+    case 'unassigned_user':
+    case 'user':
+      return '/dashboard'
+    default:
+      return '/dashboard'
   }
-  return true;
+}
+
+export function requiresOrgContext(role: UserRole): boolean {
+  return ['org_admin', 'org_manager', 'org_user'].includes(role)
+}
+
+export function isSystemAdmin(role: UserRole): boolean {
+  return role === 'admin'
+}
+
+export function canManageOrganizations(role: UserRole): boolean {
+  return ['admin', 'tenant_owner', 'org_admin'].includes(role)
+}
+
+export function canManageUsers(role: UserRole): boolean {
+  return ['admin', 'tenant_owner', 'org_admin', 'org_manager'].includes(role)
+}
+
+export function canViewAnalytics(role: UserRole): boolean {
+  return ['admin', 'tenant_owner', 'org_admin', 'org_manager'].includes(role)
 }

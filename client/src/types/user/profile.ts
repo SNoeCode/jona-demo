@@ -113,16 +113,18 @@ export interface BillingInfo {
   plan_name?: string;
   status?: 'active' | 'canceled' | 'past_due' | 'trialing';
 }
-export interface UserDashboardStats {
-  totalJobs: number;
-  appliedJobs: number;
-  savedJobs: number;
-  pendingJobs: number;
-  interviewJobs: number;
-  offerJobs: number;
-  rejectedJobs: number;
-  matchRate: number;
-  matchScore: number;
-  totalResumes: number;
-  totalApplications: number;
-}
+// export interface UserDashboardStats {
+//   totalJobs: number;
+//   appliedJobs: number;
+//   savedJobs: number;
+//   pendingJobs: number;
+//   interviewJobs: number;
+//   offerJobs: number;
+//   rejectedJobs: number;
+//   matchRate: number;
+//   matchScore: number;
+//   totalResumes: number;
+//   totalApplications: number;
+//   darkMode: false, 
+
+// }

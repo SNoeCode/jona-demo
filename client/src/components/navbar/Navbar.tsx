@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Search,
@@ -15,34 +15,64 @@ import {
 } from "lucide-react";
 import { Switch } from "@headlessui/react";
 import { useTheme } from "@/context/ThemeContext";
-import { useAuth } from "@/context/AuthUserContext";
-
+import { useAuth} from "@/context/AuthUserContext";
+import { getOrgRole } from "@/services/organization/getOrgRole";
+import type { Organization } from "@/types/organization";
+import type { AuthUser } from "@/types/user/authUser";
+interface OrgAuthResult {
+  user: AuthUser;  
+  organizationId: string;
+  organizationSlug: string;
+  organizationName: string;
+  memberRole: string;
+  role?: string;
+  membership: {
+    id: string;
+    role: string;
+    department: string | null;
+    position: string | null;
+    joined_at: string;
+  };
+}
 export default function NavbarAppRouter() {
   const { darkMode, toggleDarkMode } = useTheme();
-  const { user, logout, organization } = useAuth();
+  const { user, signOut, organization, isAuthenticated } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+ const role = getOrgRole(
+    user && organization
+      ? {
+          user: {
+            ...user,
+            user_metadata: {
+              ...user.user_metadata,
+              role: user.user_metadata?.role as import("@/types/user/authUser").UserRole | undefined,
+            },
+          },
+          organizationId: organization.organization.id,
+          organizationSlug: organization.organization.slug,
+          organizationName: organization.organization.name,
+          memberRole: organization.membership.role,
+          role: organization.membership.role,
+          membership: {
+            id: organization.membership.id,
+            role: organization.membership.role,
+            department: organization.membership.department || null,
+            position: organization.membership.position || null,
+            joined_at: organization.membership.joined_at
+          }
+        }
+      : null
+  );
+const isAdmin = role === "admin";
+const isTenantOwner = role === "tenant_owner";
+const isOrgOwner = role === "owner";
+const isOrgManager = role === "manager";
+const isOrgUser = role === "member";
 
-  // Get user role from either user_metadata or app_metadata
-  const role = user?.user_metadata?.role || user?.app_metadata?.role;
-  const isAdmin = role === "admin";
-  const isTenantOwner = role === "tenant_owner";
+  const hasOrganization = !!user?.organizations?.length;
 
-  // Check organization role by converting enum to lowercase string
-  const membershipRole = organization?.membership?.role;
-  const membershipRoleStr = membershipRole?.toLowerCase();
-  const isOrgOwner = role === "org_admin" || membershipRoleStr === "owner";
-  const isOrgManager = role === "org_manager" || membershipRoleStr === "manager";
-  const isOrgUser = role === "org_user" || membershipRoleStr === "member";
-
-  const isAuthenticated = !!user;
-  const isRegularUser = role === "user" || role === "unassigned_user";
-
-  // Check if user is in an organization context
-  const hasOrganization = !!organization?.organization;
-
-  // Navigation handlers
   const handleProfileClick = () => {
     router.push("/profile");
     setIsMenuOpen(false);
@@ -96,10 +126,25 @@ export default function NavbarAppRouter() {
     router.push("/org/select");
     setIsMenuOpen(false);
   };
-
   const handleLogout = async () => {
     setIsMenuOpen(false);
-    await logout();
+    if (typeof signOut === "function") {
+      try {
+        await signOut();
+        router.push("/login");
+      } catch (err) {
+        console.error(
+          `Failed to sign out user: ${
+            err instanceof Error ? err.message : JSON.stringify(err)
+          }`,
+          err
+        );
+        router.push("/login");
+      }
+    } else {
+      console.warn("signOut missing on Auth context; redirecting to login");
+      router.push("/login");
+    }
   };
 
   const isActive = (path: string) => pathname === path;
@@ -196,7 +241,6 @@ export default function NavbarAppRouter() {
       );
     }
 
-    // Default for all other authenticated users (including regular users)
     if (isAuthenticated) {
       return (
         <>
@@ -246,7 +290,9 @@ export default function NavbarAppRouter() {
               <div className="ml-4 flex items-center space-x-2">
                 <Building2 className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {organization.organization.name}
+                  {user?.organizations?.[0]?.organizations?.name ??
+                    user?.organizations?.[0]?.organizations?.slug ??
+                    "Organization"}
                 </span>
               </div>
             )}
@@ -327,8 +373,10 @@ export default function NavbarAppRouter() {
                   </span>
                   {isAdmin && <Shield className="w-4 h-4 text-red-500" />}
                   {hasOrganization && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ({organization.membership?.role})
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {user?.organizations?.[0]?.organizations?.name ??
+                        user?.organizations?.[0]?.organizations?.slug ??
+                        "Organization"}
                     </span>
                   )}
                 </div>
@@ -441,5 +489,3 @@ export default function NavbarAppRouter() {
     </nav>
   );
 }
-
-

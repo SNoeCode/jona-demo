@@ -1,4 +1,3 @@
-
 import type { User, Session } from "@supabase/supabase-js";
 import { OrganizationMember } from "../organization";
 
@@ -35,6 +34,7 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+  // primaryRole: UserRole;
   aud: string;
   created_at: string;
   last_sign_in_at?: string;
@@ -132,7 +132,7 @@ export function toAuthUserRequired(user: SupabaseUser | null): AuthUser {
 export function toSerializableAuthUser(user: User): AuthUser {
   const appMeta = user.app_metadata ?? {};
   const userMeta = user.user_metadata ?? {};
-  
+
   const rawRole = appMeta.role ?? userMeta.role;
   const role: UserRole = validRoles.includes(rawRole as UserRole)
     ? (rawRole as UserRole)
@@ -141,8 +141,8 @@ export function toSerializableAuthUser(user: User): AuthUser {
   return {
     id: user.id,
     email: user.email ?? "",
-    role,  // ✅ Added
-    aud: user.aud ?? "",  // ✅ Added
+    role, // ✅ Added
+    aud: user.aud ?? "", // ✅ Added
     user_metadata: userMeta,
     app_metadata: appMeta,
     created_at: user.created_at ?? "",
@@ -153,12 +153,12 @@ export function toSerializableAuthUser(user: User): AuthUser {
  * Type guard to check if a user is an admin
  */
 export function isAdmin(user: AuthUser | null | undefined): boolean {
-  return user?.user_metadata?.role === 'admin';
+  return user?.user_metadata?.role === "admin";
 }
 
 /**
  * Type guard to check if a user has a pro subscription
  */
 export function isPro(user: AuthUser | null | undefined): boolean {
-  return user?.user_metadata?.subscription_type === 'enterprise';
+  return user?.user_metadata?.subscription_type === "enterprise";
 }

@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
@@ -72,36 +71,36 @@ export default function Dashboard({
 
   // Use the fixed hook
   const { upsertStatus } = useJobStatusWriter();
-  const {authUser } = useAuth();
+  const { authUser } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
   const localKey = `user_preferences_${user.id}`;
   const [jobCount, setJobCount] = useState<number | null>(null);
   const router = useRouter();
   const fetchJobs = async (): Promise<Job[]> => {
-  try {
-    setIsLoading(true);
-    const allJobs = await JobService.getAllJobs(user.id);
-    console.log("📦 Total jobs fetched:", allJobs.length);
-    
-    // ✅ Ensure all jobs have a company value
-    const jobsWithCompany = allJobs.map(job => ({
-      ...job,
-      company: job.company || 'Unknown Company'
-    }));
-    
-    setJobs(jobsWithCompany);
-    setScrapingStatus({
-      active: true,
-      lastRun: new Date().toLocaleString(),
-    });
-    return jobsWithCompany;
-  } catch (error) {
-    console.error("❌ Failed to fetch jobs:", error);
-    return [];
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      setIsLoading(true);
+      const allJobs = await JobService.getAllJobs(user.id);
+      console.log("📦 Total jobs fetched:", allJobs.length);
+
+      // ✅ Ensure all jobs have a company value
+      const jobsWithCompany = allJobs.map((job) => ({
+        ...job,
+        company: job.company || "Unknown Company",
+      }));
+
+      setJobs(jobsWithCompany);
+      setScrapingStatus({
+        active: true,
+        lastRun: new Date().toLocaleString(),
+      });
+      return jobsWithCompany;
+    } catch (error) {
+      console.error("❌ Failed to fetch jobs:", error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchJobs();
@@ -117,49 +116,27 @@ export default function Dashboard({
         { event: "*", schema: "public", table: "jobs" },
         (payload) => {
           const { eventType, new: newJob, old: oldJob } = payload;
-const transformJob = (job: any): Job => ({
-  id: job.id,
-  title: job.title,
-  company: job.company || 'Unknown Company', // ✅ Add fallback here
-  job_location: job.job_location ?? undefined,
-  salary: job.salary ?? undefined,
-  site: job.site || "",
-  date: job.date
-    ? new Date(job.date).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0],
-  applied: job.applied ?? false,
-  saved: job.saved ?? false,
-  url: job.url || "",
-  job_description: job.job_description ?? undefined,
-  category: job.category ?? undefined,
-  priority: job.priority ?? undefined,
-  status: job.status ?? undefined,
-  search_term: job.search_term ?? undefined,
-  skills: job.skills ?? [],
-  inserted_at: job.inserted_at ?? null,
-});
-          // const transformJob = (job: any): Job => ({
-          //   id: job.id,
-          //   title: job.title,
-          //   company: job.company,
-          //   job_location: job.job_location ?? undefined,
-          //   salary: job.salary ?? undefined,
-          //   site: job.site || "",
-          //   date: job.date
-          //     ? new Date(job.date).toISOString().split("T")[0]
-          //     : new Date().toISOString().split("T")[0],
-          //   applied: job.applied ?? false,
-          //   saved: job.saved ?? false,
-          //   url: job.url || "",
-          //   job_description: job.job_description ?? undefined,
-          //   category: job.category ?? undefined,
-          //   priority: job.priority ?? undefined,
-          //   status: job.status ?? undefined,
-          //   search_term: job.search_term ?? undefined,
-          //   skills: job.skills ?? [],
-          //   inserted_at: job.inserted_at ?? null,
-          // });
-
+          const transformJob = (job: any): Job => ({
+            id: job.id,
+            title: job.title,
+            company: job.company || "Unknown Company", // ✅ Add fallback here
+            job_location: job.job_location ?? undefined,
+            salary: job.salary ?? undefined,
+            site: job.site || "",
+            date: job.date
+              ? new Date(job.date).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0],
+            applied: job.applied ?? false,
+            saved: job.saved ?? false,
+            url: job.url || "",
+            job_description: job.job_description ?? undefined,
+            category: job.category ?? undefined,
+            priority: job.priority ?? undefined,
+            status: job.status ?? undefined,
+            search_term: job.search_term ?? undefined,
+            skills: job.skills ?? [],
+            inserted_at: job.inserted_at ?? null,
+          });
           setJobs((prev: Job[]) => {
             switch (eventType) {
               case "INSERT":
@@ -316,35 +293,30 @@ const transformJob = (job: any): Job => ({
       case "dashboard":
         return (
           <div className="space-y-6">
-         
             {/* Main Job Tracker */}
             <JobTrackerTab
-        jobs={jobs}
-        onJobUpdateAction={handleJobsUpdate}
-        onApplyStatusChangeAction={handleApplyStatusChange}
-        onToggleSavedAction={handleToggleSaved}
-        darkMode={darkMode}
-        userId={user.id}
-        userEmail={user.email ?? ''} // Add this line
-      />
+              jobs={jobs}
+              onJobUpdateAction={handleJobsUpdate}
+              onApplyStatusChangeAction={handleApplyStatusChange}
+              onToggleSavedAction={handleToggleSaved}
+              darkMode={darkMode}
+              userId={user.id}
+              userEmail={user.email ?? ""} // Add this line
+            />
           </div>
         );
-    case "calendar":
-  return (
-    <>
-      <CalendarWidget
-        jobs={jobs}
-        userId={user.id}
-        darkMode={false}
-        onOpenFullCalendar={() => router.push("/calendar")}
-      />
-      <CalendarTab
-        jobs={jobs}
-        darkMode={darkMode}
-        userId={user.id}
-      />
-    </>
-  );
+      case "calendar":
+        return (
+          <>
+            <CalendarWidget
+              jobs={jobs}
+              userId={user.id}
+              darkMode={false}
+              onOpenFullCalendar={() => router.push("/calendar")}
+            />
+            <CalendarTab jobs={jobs} darkMode={darkMode} userId={user.id} />
+          </>
+        );
       case "resume":
         return (
           <ResumeTab
@@ -369,110 +341,70 @@ const transformJob = (job: any): Job => ({
     }
   };
 
-return (
-  <div className={`min-h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"}`}>
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {/* Header Section - Responsive */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-[#1B3A57] dark:text-white">
-          Dashboard
-        </h1>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <button
-            onClick={handleRefreshJobs}
-            className="px-4 py-2 bg-[#FF6B35] hover:bg-[#FF5722] dark:bg-[#FF8C5A] dark:hover:bg-[#FF6B35] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base font-medium"
-            disabled={isLoading}
-          >
-            {isLoading ? "Refreshing..." : "Refresh Jobs"}
-          </button>
-          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            Last updated: {scrapingStatus.lastRun || "Never"}
-          </span>
+  return (
+    <div
+      className={`min-h-screen ${
+        darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+      }`}
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Header Section - Responsive */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-[#1B3A57] dark:text-white">
+            Dashboard
+          </h1>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <button
+              onClick={handleRefreshJobs}
+              className="px-4 py-2 bg-[#FF6B35] hover:bg-[#FF5722] dark:bg-[#FF8C5A] dark:hover:bg-[#FF6B35] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base font-medium"
+              disabled={isLoading}
+            >
+              {isLoading ? "Refreshing..." : "Refresh Jobs"}
+            </button>
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Last updated: {scrapingStatus.lastRun || "Never"}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Tab Navigation - Scrollable on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 mb-6 sm:mb-8">
-        <TabNavigation
-          activeTab={activeTab}
-          onTabChangeAction={handleTabChange}
-          darkMode={darkMode}
-          user={user}
-          jobs={jobs}
-        />
-      </div>
-
-      {/* Content Area with smooth transitions */}
-      <div
-        key={activeTab}
-        className={`transition-all duration-500 ease-in-out ${
-          tabDirection === "right"
-            ? "animate-slide-in-left"
-            : "animate-slide-in-right"
-        }`}
-      >
-        {renderTabContent()}
-      </div>
-
-      {/* Count Mismatch Warning - Responsive */}
-      {mismatch && (
-        <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-auto bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-yellow-500 p-3 sm:p-4 rounded-lg shadow-lg z-50">
-          <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-300 font-medium">
-            ⚠️ Count mismatch: UI shows {jobs.length}, DB has {jobCount}
-          </p>
-          <button
-            onClick={handleRefreshJobs}
-            className="mt-2 text-xs sm:text-sm text-yellow-900 dark:text-yellow-200 underline hover:no-underline"
-          >
-            Refresh to sync
-          </button>
+        {/* Tab Navigation - Scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 mb-6 sm:mb-8">
+          <TabNavigation
+            activeTab={activeTab}
+            onTabChangeAction={handleTabChange}
+            darkMode={darkMode}
+            user={user}
+            jobs={jobs}
+          />
         </div>
-      )}
+
+        {/* Content Area with smooth transitions */}
+        <div
+          key={activeTab}
+          className={`transition-all duration-500 ease-in-out ${
+            tabDirection === "right"
+              ? "animate-slide-in-left"
+              : "animate-slide-in-right"
+          }`}
+        >
+          {renderTabContent()}
+        </div>
+
+        {/* Count Mismatch Warning - Responsive */}
+        {mismatch && (
+          <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-auto bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-yellow-500 p-3 sm:p-4 rounded-lg shadow-lg z-50">
+            <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-300 font-medium">
+              ⚠️ Count mismatch: UI shows {jobs.length}, DB has {jobCount}
+            </p>
+            <button
+              onClick={handleRefreshJobs}
+              className="mt-2 text-xs sm:text-sm text-yellow-900 dark:text-yellow-200 underline hover:no-underline"
+            >
+              Refresh to sync
+            </button>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
-//   return (
-//     <div
-//       className={`min-h-screen ${
-//         darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
-//       }`}
-//     >
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="mb-6">
-//           <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-//           <div className="flex items-center gap-4">
-//             <button
-//               onClick={handleRefreshJobs}
-//               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-//               disabled={isLoading}
-//             >
-//               {isLoading ? "Refreshing..." : "Refresh Jobs"}
-//             </button>
-//             <span className="text-sm text-gray-500">
-//               Last updated: {scrapingStatus.lastRun || "Never"}
-//             </span>
-//           </div>
-//         </div>
-
-//       <TabNavigation
-//           activeTab={activeTab}
-//           onTabChangeAction={handleTabChange}
-//           darkMode={darkMode}
-//           user={user}
-//           jobs={jobs}
-//         />
-
-//         <div
-//           key={activeTab}
-//           className={`transition-transform duration-500 ease-in-out ${
-//             tabDirection === "right"
-//               ? "animate-slide-in-left"
-//               : "animate-slide-in-right"
-//           }`}
-//         >
-//           {renderTabContent()}
-//         </div>
-//       </div>
-//     </div>
-//   );
-}
+  );
+  }

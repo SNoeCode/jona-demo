@@ -10,7 +10,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin auth
     const supabase = createServerComponentClient({ cookies });
     const { data: { user }, error } = await supabase.auth.getUser();
     
@@ -38,7 +37,6 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin auth
     const supabase = createServerComponentClient({ cookies });
     const { data: { user }, error } = await supabase.auth.getUser();
     
@@ -64,7 +62,6 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin auth
     const supabase = createServerComponentClient({ cookies });
     const { data: { user }, error } = await supabase.auth.getUser();
     

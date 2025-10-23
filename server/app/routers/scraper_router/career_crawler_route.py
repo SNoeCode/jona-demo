@@ -1,84 +1,97 @@
-# from fastapi import APIRouter
-# from app.types.scraper import ScraperRequest
-# from app.scrapers.career_crawler import crawl_career_builder
-# from app.utils.write_jobs import write_jobs_csv
-# from pydantic import BaseModel
-# from typing import List, Optional
-# from time import time
-
-# career_crawler_router = APIRouter()
-
-# class ScraperRequest(BaseModel):
-#     location: str
-#     days: int
-#     keywords: List[str]
-#     sites: Optional[List[str]] = []
-#     priority: Optional[str] = "medium"
-#     admin_user_id: Optional[str]
-#     admin_email: Optional[str]
-#     debug: Optional[bool] = False
-
-# @career_crawler_router.post("/")
-# async def run_careerbuilder_scraper(request: ScraperRequest):
-#     start = time()
-
-#     jobs = crawl_career_builder(
-#         location=request.location,
-#         keywords=request.keywords,
-#         days=request.days
-#     )
-
-#     duration = round(time() - start, 2)
-
-#     write_jobs_csv(jobs, scraper="career_builder_crawler")
-
-#     return {
-#         "success": True,
-#         "status": "completed",
-#         "career_builder_crawler": len(jobs),
-#         "jobs_found": len(jobs),
-#         "jobs_saved": len(jobs),
-#         "duration_seconds": duration,
-#         "message": f"Found {len(jobs)} jobs from CareerBuilder in {duration} seconds"
-#     }
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from typing import List, Dict
-from fastapi import FastAPI, Query, HTTPException, Header, File, UploadFile,Request, APIRouter
-from datetime import datetime
-import os
-from jose import jwt, JWTError
-from app.utils.skills_engine import (
-    load_all_skills,
-    extract_flat_skills,
-    extract_skills,
-    extract_skills_by_category
-)
-from app.db.connect_database import supabase
-from app.db.cleanup import cleanup
-from app.utils.scan_for_duplicates import scan_for_duplicates
-from app.utils.write_jobs import write_jobs_csv
-
+import time
 from app.scrapers.career_crawler import crawl_career_builder
+from app.utils.write_jobs import write_jobs_csv
+from app.utils.skills_engine import load_all_skills
+
 SKILLS = load_all_skills()
 router = APIRouter()
-# Initialize FastAPI app
-app = FastAPI()
-router = APIRouter()
-from fastapi import APIRouter, Query
-router = APIRouter()
-@router.get("/run")
+class CareerBuilderScraperRequest(BaseModel):
+    location: str = "remote"
+    days: int = 15
+    keywords: List[str] = []
+    debug: bool = False
+    priority: str = "medium"
+    max_results: int = 100
+class CareerBuilderScraperResponse(BaseModel):
+    success: bool
+    jobs_found: int
+    jobs_saved: int
+    duration_seconds: float
+    message: str
+    status: str
+    scraper_name: str = "career_builder"
 
-# @router.get("/careerbuilder", summary="Scrape and crawl CareerBuilder")
-def run_careerbuilder(location: str = Query("remote"), days: int = Query(15), debug: bool = Query(False)) -> Dict:
-    # career_builder = scrape_career_builder(location)
-    career_builder_crawler = crawl_career_builder(location)
+@router.post("/run", response_model=CareerBuilderScraperResponse, summary="Run CareerBuilder Crawler")
+async def run_career_builder_crawler(request: CareerBuilderScraperRequest) -> Dict:
+    start_time = time.time()
 
-    # write_jobs_csv(career_builder, scraper="career_builder_scraper")
-    write_jobs_csv(crawl_career_builder, scraper="career_builder_crawler")
+    try:
+        jobs = crawl_career_builder(
+            location=request.location, 
+            pages=request.max_results, 
+            days=request.days
+        )
+        write_jobs_csv(jobs, folder_name="job_data", label="careerbuilder")
 
+        duration = time.time() - start_time
+        total_jobs_found = len(jobs)
+
+        return {
+            "success": True,
+            "jobs_found": total_jobs_found,
+            "jobs_saved": total_jobs_found,
+            "duration_seconds": round(duration, 2),
+            "message": f"Successfully crawled {total_jobs_found} jobs from CareerBuilder",
+            "status": "completed",
+            "scraper_name": "career_builder"
+        }
+
+    except Exception as e:
+        duration = time.time() - start_time
+        return {
+            "success": False,
+            "jobs_found": 0,
+            "jobs_saved": 0,
+            "duration_seconds": round(duration, 2),
+            "message": f"Error crawling CareerBuilder: {str(e)}",
+            "status": "failed",
+            "scraper_name": "career_builder"
+        }
+
+@router.get("/run", response_model=CareerBuilderScraperResponse, summary="Run CareerBuilder Crawler (GET)")
+async def run_career_builder_crawler_get(
+    location: str = Query("remote", description="Job location to search"),
+    days: int = Query(15, ge=1, le=30, description="Number of days back to search"),
+    debug: bool = Query(False, description="Enable debug mode"),
+    keywords: str = Query("", description="Comma-separated keywords"),
+    max_results: int = Query(100, ge=1, le=500, description="Max results per keyword")
+) -> Dict:
+    keyword_list = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
+
+    request = CareerBuilderScraperRequest(
+        location=location,
+        days=days,
+        keywords=keyword_list,
+        debug=debug,
+        max_results=max_results
+    )
+
+    return await run_career_builder_crawler(request)
+
+@router.get("/status", summary="Get CareerBuilder Crawler Status")
+async def get_career_builder_status() -> Dict:
     return {
-        # "career_builder_scraper": len(career_builder),
-        "career_builder_crawler": len(crawl_career_builder),
-
-        "status": "careerbuilder complete"
+        "scraper": "career_builder",
+        "status": "active",
+        "endpoints": {
+            "post": "/scrapers/career_builder/run",
+            "get": "/scrapers/career_builder/run?location=remote&days=15"
+        },
+        "features": [
+            "career_builder_crawler",
+            "csv_export"
+        ]
     }

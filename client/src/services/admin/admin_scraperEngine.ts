@@ -21,6 +21,23 @@ export interface ScraperResponse {
   jobs?: Job[];
   priority?: "low" | "medium" | "high";
 }
+export const VALID_SCRAPER_TYPES = [
+  "indeed",
+  "careerbuilder",
+  "dice",
+  "ziprecruiter",
+  "teksystems",
+  "monster",
+  "monster-playwright",
+  "zip-playwright",
+  "snag-playwright",
+];
+
+export function isValidScraperType(type: string): boolean {
+  return VALID_SCRAPER_TYPES.includes(type);
+}
+
+const FASTAPI_BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
 
 // 🧼 Centralized header builder
 function buildHeaders(): HeadersInit {
@@ -37,15 +54,27 @@ async function runScraperInternal(
   admin?: { id: string; email: string }
 ): Promise<ScraperResponse> {
   try {
-    const response = await fetch(`/api/admin/scraper/${scraperType}`, {
-      method: "POST",
-      headers: buildHeaders(),
-      body: JSON.stringify({
-        ...config,
-        admin_user_id: admin?.id,
-        admin_email: admin?.email,
-      }),
-    });
+    const response = await fetch(`${FASTAPI_BASE_URL}/api/scrapers/${scraperType}/run`, {
+  method: "POST",
+  headers: buildHeaders(),
+  body: JSON.stringify({
+    ...config,
+    admin_user_id: admin?.id,
+    admin_email: admin?.email,
+  }),
+});
+
+
+
+    // const response = await fetch(`/api/admin/scraper/${scraperType}`, {
+    //   method: "POST",
+    //   headers: buildHeaders(),
+    //   body: JSON.stringify({
+    //     ...config,
+    //     admin_user_id: admin?.id,
+    //     admin_email: admin?.email,
+    //   }),
+    // });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -88,6 +117,9 @@ export const ScraperRegistry = {
   careerbuilder: { label: "CareerBuilder", script: "run_careerbuilder.py" },
   teksystems: { label: "TEKsystems", script: "run_teksystems.py" },
   dice: { label: "Dice", script: "run_dice.py" },
+  "monster-playwright": { label: "Monster (Playwright)", script: "run_monster_playwright.py" },
+  "zip-playwright": { label: "ZipRecruiter (Playwright)", script: "run_zip_playwright.py" },
+  "snag-playwright": { label: "Snagajob (Playwright)", script: "run_snag_playwright.py" },
 };
 
 // 🧠 Orchestrator for multiple scrapers

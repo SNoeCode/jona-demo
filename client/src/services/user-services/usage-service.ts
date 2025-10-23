@@ -14,7 +14,6 @@ export class UsageService {
     monthYear?: string
   ): Promise<UserUsage | null> {
     try {
-      // Validate session
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         console.error("No valid session for usage access");
@@ -37,7 +36,6 @@ export class UsageService {
 
       if (data) return data;
 
-      // If no record exists, initialize it
       const { data: newUsage, error: insertError } = await supabase
         .from("user_usage")
         .insert({
@@ -122,7 +120,7 @@ export class UsageService {
       },
     };
   }
-  // Initialize user usage for a month
+
   static async initializeUserUsage(
     userId: string,
     monthYear: string
@@ -142,8 +140,7 @@ export class UsageService {
 
       if (error) {
         console.error("Error initializing user usage:", error);
-        // Return default instead of throwing
-        return {
+              return {
           id: "",
           user_id: userId,
           month_year: monthYear,
@@ -171,7 +168,6 @@ export class UsageService {
     }
   }
 
-  // Update user usage with better error handling
   static async updateUserUsage(
     userId: string,
     monthYear: string,
@@ -203,7 +199,6 @@ export class UsageService {
     }
   }
 
-  // Increment usage counters
   static async incrementUsage(
     userId: string,
     type: "jobs_scraped" | "applications_sent" | "resumes_uploaded",
@@ -239,7 +234,6 @@ export class UsageService {
       const subscription = await getCurrentSubscription(userId);
       const usage = await this.getUserUsage(userId);
 
-      // Default limits for free plan
       const defaultLimits = {
         max_jobs_per_month: 50,
         max_applications_per_day: 5,
@@ -286,8 +280,7 @@ export class UsageService {
       };
     } catch (error) {
       console.error("checkUsageLimits error:", error);
-      // Return safe defaults
-      return {
+          return {
         canScrapeJobs: true,
         canSendApplications: true,
         canUploadResumes: true,
@@ -330,97 +323,3 @@ return data?.[0] ?? null;
 }
 
 
-
-
-
-//  static async getUsagePayload(
-//   userId: string
-// ): Promise<UsagePayload | null> {
-//   try {
-//     // Check if user has access to these tables first
-//     const { data: session } = await supabase.auth.getSession();
-//     if (!session.session) {
-//       console.error("No valid session for usage payload");
-//       return null;
-//     }
-
-//     // Try to fetch the usage summary first, but handle permissions gracefully
-//     const { data: summary, error: summaryError } = await supabase
-//       .from("user_usage_summary")
-//       .select("*")
-//       .eq("user_id", userId)
-//       .maybeSingle();
-
-//     if (summary && isUserUsageSummary(summary)) {
-//       return summary;
-//     }
-
-//     if (summaryError && summaryError.code !== "PGRST116") {
-//       console.warn("Usage summary fetch failed:", summaryError.message);
-//     }
-
-//     // Fallback to raw usage if summary not found or permission denied
-//     const { data: usageData, error: usageError } = await supabase
-//       .from("user_usage")
-//       .select("*")
-//       .eq("user_id", userId)
-//       .order("month_year", { ascending: false })
-//       .limit(1);
-
-//     if (usageError) {
-//       console.warn("Usage data fetch failed:", usageError.message);
-//       return null;
-//     }
-
-//     return usageData?.[0] ?? null;
-//   } catch (error) {
-//     console.error("getUsagePayload error:", error);
-//     return null;
-//   }
-// }
-
-//   }
-// // Fixed usage payload function with better error handling
-// static async getUsagePayload(userId: string): Promise<UsagePayload | null> {
-//   try {
-//     // Check if user has access to these tables first
-//     const { data: session } = await supabase.auth.getSession();
-//     if (!session.session) {
-//       console.error("No valid session for usage payload");
-//       return null;
-//     }
-
-//     // Try to fetch the usage summary first, but handle permissions gracefully
-//     const { data: summary, error: summaryError } = await supabase
-//       .from("user_usage_summary")
-//       .select("*")
-//       .eq("user_id", userId)
-//       .maybeSingle();
-
-//     if (summary && isUserUsageSummary(summary)) {
-//       return summary;
-//     }
-
-//     if (summaryError && summaryError.code !== "PGRST116") {
-//       console.warn("Usage summary fetch failed:", summaryError.message);
-//     }
-
-//     // Fallback to raw usage if summary not found or permission denied
-//     const { data: usageData, error: usageError } = await supabase
-//       .from("user_usage")
-//       .select("*")
-//       .eq("user_id", userId)
-//       .order("month_year", { ascending: false })
-//       .limit(1);
-
-//     if (usageError) {
-//       console.warn("Usage data fetch failed:", usageError.message);
-//       return null;
-//     }
-
-//     return usageData?.[0] ?? null;
-//   } catch (error) {
-//     console.error("getUsagePayload error:", error);
-//     return null;
-//   }
-// }

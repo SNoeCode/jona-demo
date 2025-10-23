@@ -7,8 +7,6 @@ from fastapi import FastAPI, Query,Depends, HTTPException, Header, File, UploadF
 from datetime import datetime
 import os
 import logging
-app = FastAPI()
-router = APIRouter()
 
 from pydantic import BaseModel
 from openai import OpenAI
@@ -23,6 +21,8 @@ from app.utils.skills_engine import (
     load_all_skills,
     extract_skills
 )
+
+app = FastAPI()
 
 router = APIRouter()
 SKILLS = load_all_skills()
@@ -65,6 +65,7 @@ class VoiceJobSearchRequest(BaseModel):
 
 router = APIRouter()
 @router.get("/run")
+
 def get_current_user_id(authorization: str = Header(...)) -> str:
     token = authorization.replace("Bearer ", "")
     secret = os.environ["SUPABASE_JWT_SECRET"]
@@ -181,15 +182,15 @@ def send_resume(payload: ResumeSubmission, user_id: str = Depends(get_current_us
 
 
 
-# 🔐 Authentication helper
-def get_current_user_id(authorization: str = Header(...)) -> str:
-    token = authorization.replace("Bearer ", "")
-    secret = os.environ["SUPABASE_JWT_SECRET"]
-    try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
-        return payload["sub"]
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid auth token")
+# # 🔐 Authentication helper
+# def get_current_user_id(authorization: str = Header(...)) -> str:
+#     token = authorization.replace("Bearer ", "")
+#     secret = os.environ["SUPABASE_JWT_SECRET"]
+#     try:
+#         payload = jwt.decode(token, secret, algorithms=["HS256"])
+#         return payload["sub"]
+#     except JWTError:
+#         raise HTTPException(status_code=401, detail="Invalid auth token")
 
 # 🤖 AI-Powered Resume Matching with OpenAI
 @router.post("/match/openai", response_model=list[PromptResult])

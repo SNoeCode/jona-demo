@@ -13,18 +13,33 @@ import type {
   AuthUser,
   UserRole,
   OrganizationContext,
+  OrganizationMember,
 } from "@/types/organization";
 import { supabase } from "@/lib/supabaseClient";
+import { getPrimaryRole } from "@/utils/roleUtils";
 
 interface AuthContextType {
+
   user: AuthUser | null;
   authUser: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
+  
+
   isAdmin: boolean;
   isOrgOwner: boolean;
   isTenantOwner: boolean;
-  organization: OrganizationContext | null;
+  
+  roles?: UserRole[];
+  is_admin?: boolean;
+  is_tenant_owner?: boolean;
+   organization: OrganizationContext | null;
+  organizations?: OrganizationMember[];
+  current_organization_id?: string;
+  
+
+  accessToken?: string;
+  
   signIn: (
     email: string,
     password: string
@@ -68,6 +83,9 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
   const [organization, setOrganization] = useState<OrganizationContext | null>(
     null
   );
+  const [organizations, setOrganizations] = useState<OrganizationMember[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [accessToken, setAccessToken] = useState<string | undefined>();
   const router = useRouter();
 
   const normalizeRole = (role: string | undefined): UserRole => {
@@ -84,9 +102,129 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
     return allowed.includes(role as UserRole) ? (role as UserRole) : "user";
   };
 
+  const fetchUserProfile = useCallback(async (
+    supabaseUser: User,
+    token: string
+  ) => {
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from("users")
+        .select("id, email, is_admin, is_tenant_owner")
+        .eq("id", supabaseUser.id)
+        .maybeSingle();
+
+      if (profileError || !userProfile) {
+        console.error(
+          "Profile fetch error:",
+          profileError || "No user profile found"
+        );
+        return null;
+      }
+    const userRoles: UserRole[] = [];
+      
+      if (userProfile.is_admin) {
+        userRoles.push("admin");
+      }
+      
+      if (userProfile.is_tenant_owner) {
+        userRoles.push("tenant_owner");
+      }
+
+       const { data: memberships, error: orgError } = await supabase
+        .from("organization_members")
+        .select(`
+          *,
+          organizations (*),
+          users!organization_members_user_id_fkey (
+            id,
+            email,
+            full_name,
+            avatar_url,
+            created_at
+          )
+        `)
+        .eq("user_id", supabaseUser.id)
+        .eq("is_active", true);
+
+      if (orgError) {
+        console.error("Organization fetch error:", orgError);
+      }
+
+       const orgMemberships: OrganizationMember[] = memberships || [];
+      
+      if (orgMemberships?.length) {
+     
+        for (const membership of orgMemberships) {
+          if (membership.role === "org_admin") userRoles.push("org_admin");
+          else if (membership.role === "org_manager") userRoles.push("org_manager");
+          else if (membership.role === "org_user") userRoles.push("org_user");
+        }
+      }
+
+      if (userRoles.length === 0) {
+        userRoles.push("unassigned_user");
+      }
+  let primaryRole: UserRole;
+      if (typeof getPrimaryRole === 'function') {
+        primaryRole = getPrimaryRole({
+          is_admin: userProfile.is_admin,
+          is_tenant_owner: userProfile.is_tenant_owner,
+          organizations: orgMemberships.map((org) => ({ role: org.role })),
+        });
+      } else {
+        primaryRole = normalizeRole(
+          supabaseUser.user_metadata?.role || 
+          supabaseUser.app_metadata?.role ||
+          userRoles[0]
+        );
+      }
+
+      const currentOrg = orgMemberships?.[0];
+      if (currentOrg?.organizations) {
+        const context: OrganizationContext = {
+          organization: currentOrg.organizations,
+          membership: currentOrg,
+          permissions: {
+            canManageMembers: ["org_admin"].includes(currentOrg.role),
+            canManageSettings: ["org_admin"].includes(currentOrg.role),
+            canManageBilling: false, // Only tenant owners can manage billing
+            canViewAnalytics: ["org_admin", "org_manager"].includes(currentOrg.role),
+            canInviteMembers: ["org_admin", "org_manager"].includes(currentOrg.role),
+            canRemoveMembers: ["org_admin"].includes(currentOrg.role),
+          },
+        };
+        setOrganization(context);
+      }
+
+      setOrganizations(orgMemberships);
+      setRoles(userRoles);
+      setAccessToken(token);
+
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email ?? "",
+        role: primaryRole,
+        roles: userRoles,
+        aud: supabaseUser.aud ?? "",
+        created_at: supabaseUser.created_at ?? "",
+        app_metadata: supabaseUser.app_metadata ?? {},
+        user_metadata: supabaseUser.user_metadata ?? {},
+        is_admin: userProfile.is_admin || false,
+        is_org_owner: orgMemberships.some((m) => m.role === "org_admin"),
+        is_tenant_owner: userProfile.is_tenant_owner || false,
+        current_organization_id: orgMemberships[0]?.organization_id,
+        organizations: orgMemberships,
+        accessToken: token,
+      };
+    } catch (error) {
+      console.error("Unexpected error fetching user profile:", error);
+      return null;
+    }
+  }, []);
+
   const checkUser = useCallback(async () => {
     try {
-      // CRITICAL: Get both user and session
+     
       const {
         data: { session },
         error: sessionError,
@@ -97,6 +235,9 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
         setUser(null);
         setAuthUser(null);
         setOrganization(null);
+        setOrganizations([]);
+        setRoles([]);
+        setAccessToken(undefined);
         return;
       }
 
@@ -104,79 +245,48 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
         setUser(null);
         setAuthUser(null);
         setOrganization(null);
+        setOrganizations([]);
+        setRoles([]);
+        setAccessToken(undefined);
         return;
       }
 
       const supabaseUser = session.user;
-
-      // Set authUser
-      setAuthUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email ?? "",
-        role: normalizeRole(
-          supabaseUser.user_metadata?.role || supabaseUser.app_metadata?.role
-        ),
-        aud: supabaseUser.aud ?? "",
-        created_at: supabaseUser.created_at ?? "",
-        app_metadata: supabaseUser.app_metadata ?? {},
-        user_metadata: supabaseUser.user_metadata ?? {},
-      });
-
-      // Fetch organization membership
-      try {
-        const { data: membership, error: orgError } = await supabase
-          .from("organization_members")
-          .select("*, organizations (*)")
-          .eq("user_id", supabaseUser.id)
-          .eq("is_active", true)
-          .maybeSingle();
-
-        if (orgError) {
-          console.error("Organization fetch error:", orgError);
-        } else if (membership?.organizations) {
-          const role = membership.role;
-          const context: OrganizationContext = {
-            organization: membership.organizations,
-            membership,
-            permissions: {
-              canManageMembers: ["org_admin", "owner", "admin"].includes(role),
-              canManageSettings: ["org_admin", "owner", "admin"].includes(role),
-              canManageBilling: ["owner"].includes(role),
-              canViewAnalytics: ["org_admin", "org_manager", "owner", "admin", "manager"].includes(role),
-              canInviteMembers: ["org_admin", "org_manager", "owner", "admin", "manager"].includes(role),
-              canRemoveMembers: ["org_admin", "owner", "admin"].includes(role),
-            },
-          };
-          setOrganization(context);
-        }
-      } catch (orgErr) {
-        console.error("Organization query failed:", orgErr);
-        setOrganization(null);
+      const fullUser = await fetchUserProfile(supabaseUser, session.access_token);
+      
+      if (fullUser) {
+     
+        setUser(fullUser);
+        setAuthUser(fullUser);
+      } else {
+       
+        const basicUser = {
+          id: supabaseUser.id,
+          email: supabaseUser.email ?? "",
+          role: normalizeRole(
+            supabaseUser.user_metadata?.role || supabaseUser.app_metadata?.role
+          ),
+          aud: supabaseUser.aud ?? "",
+          created_at: supabaseUser.created_at ?? "",
+          app_metadata: supabaseUser.app_metadata ?? {},
+          user_metadata: supabaseUser.user_metadata ?? {},
+        };
+        
+        setUser(basicUser);
+        setAuthUser(basicUser);
       }
-
-      // Set main user
-      setUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email ?? "",
-        role: normalizeRole(
-          supabaseUser.user_metadata?.role || supabaseUser.app_metadata?.role
-        ),
-        aud: supabaseUser.aud ?? "",
-        created_at: supabaseUser.created_at ?? "",
-        app_metadata: supabaseUser.app_metadata ?? {},
-        user_metadata: supabaseUser.user_metadata ?? {},
-        is_org_owner: supabaseUser.user_metadata?.is_org_owner || false,
-        is_tenant_owner: supabaseUser.user_metadata?.is_tenant_owner || false,
-      });
     } catch (error) {
       console.error("Error checking user:", error);
       setUser(null);
       setAuthUser(null);
       setOrganization(null);
+      setOrganizations([]);
+      setRoles([]);
+      setAccessToken(undefined);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchUserProfile]);
 
   useEffect(() => {
     const init = async () => {
@@ -194,6 +304,9 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
           setUser(null);
           setAuthUser(null);
           setOrganization(null);
+          setOrganizations([]);
+          setRoles([]);
+          setAccessToken(undefined);
           setLoading(false);
         }
       }
@@ -217,11 +330,11 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (data.session && data.user) {
-        // CRITICAL: Wait for session to be fully established
-        // The onAuthStateChange listener will trigger checkUser()
+  
         await new Promise(resolve => setTimeout(resolve, 500));
         
         console.log("✅ Sign in successful:", data.user.email);
+      
       }
 
       return { user: data.user, error: null };
@@ -254,6 +367,7 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
           id: data.user.id,
           email: data.user.email ?? "",
           role: (metadata?.role as string) || "user",
+          is_admin: (metadata?.is_admin as boolean) || false,
           is_org_owner: (metadata?.is_org_owner as boolean) || false,
           is_tenant_owner: (metadata?.is_tenant_owner as boolean) || false,
         });
@@ -266,61 +380,57 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
       return { user: null, error: err as Error };
     }
   }, [checkUser]);
-const signOut = useCallback(async () => {
-  try {
-    console.log('🔴 Starting logout process...');
-    
-    // Clear the Supabase session
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('❌ Supabase signOut error:', error);
-      // Continue with logout even if there's an error
-    } else {
-      console.log('✅ Supabase session cleared');
-    }
-    
-    // Clear local state
-    setUser(null);
-    setAuthUser(null);
-    setOrganization(null);
-    
-    // Clear any cached data
-    localStorage.clear(); // or be more selective with what you clear
-    
-    console.log('🔄 Redirecting to login...');
-    
-    // Force navigation to login
-    router.push("/login");
-    
-    // Force a hard refresh to ensure all state is cleared
-    setTimeout(() => {
+
+  const signOut = useCallback(async () => {
+    try {
+      console.log('🔴 Starting logout process...');
+      
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Supabase signOut error:', error);
+      
+      } else {
+        console.log('✅ Supabase session cleared');
+      }
+      
+      setUser(null);
+      setAuthUser(null);
+      setOrganization(null);
+      setOrganizations([]);
+      setRoles([]);
+      setAccessToken(undefined);
+      
+
+      localStorage.clear();
+      
+      console.log('🔄 Redirecting to login...');
+      
+
+      router.push("/login");
+      
+   
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+      
+    } catch (err) {
+      console.error('❌ Logout exception:', err);
+            setUser(null);
+      setAuthUser(null);
+      setOrganization(null);
+      setOrganizations([]);
+      setRoles([]);
+      setAccessToken(undefined);
+      
       window.location.href = '/login';
-    }, 100);
-    
-  } catch (err) {
-    console.error('❌ Logout exception:', err);
-    
-    // Force logout anyway
-    setUser(null);
-    setAuthUser(null);
-    setOrganization(null);
-    
-    // Force redirect even on error
-    window.location.href = '/login';
-  }
-}, [router]);
-  // const signOut = useCallback(async () => {
-  //   await supabase.auth.signOut();
-  //   setUser(null);
-  //   setAuthUser(null);
-  //   setOrganization(null);
-  //   router.push("/login");
-  // }, [router]);
+    }
+  }, [router]);
 
   const switchOrganization = useCallback(async (orgId: string) => {
     try {
-      // Ensure we have a session before making API call
+     
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -334,9 +444,8 @@ const signOut = useCallback(async () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Include the session token if needed by your API
         },
-        credentials: "include", // Important for cookies
+        credentials: "include",
         body: JSON.stringify({ organizationId: orgId }),
       });
 
@@ -354,15 +463,28 @@ const signOut = useCallback(async () => {
 
   const value = useMemo(
     () => ({
+
       user,
       authUser,
       loading,
       isAuthenticated: !!user,
-      isAdmin: user?.role === "admin",
+      
+ 
+      isAdmin: user?.role === "admin" || user?.is_admin || false,
       isOrgOwner: !!user?.is_org_owner,
       isTenantOwner: !!user?.is_tenant_owner,
+
+      roles,
+      is_admin: user?.is_admin,
+      is_tenant_owner: user?.is_tenant_owner,
+
       organization,
-      signIn,
+      organizations,
+      current_organization_id: user?.current_organization_id,
+      
+   
+      accessToken,
+          signIn,
       signUp,
       signOut,
       logout: signOut,
@@ -374,6 +496,9 @@ const signOut = useCallback(async () => {
       authUser,
       loading,
       organization,
+      organizations,
+      roles,
+      accessToken,
       signIn,
       signUp,
       signOut,
@@ -388,3 +513,4 @@ const signOut = useCallback(async () => {
     </AuthUserContext.Provider>
   );
 };
+export const AuthProvider = AuthUserProvider;

@@ -9,7 +9,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from("system_configuration")
-      .select("key,value") // ✅ limit fields
+      .select("key,value")
       .order("key");
 
     if (error) throw error;
@@ -19,7 +19,7 @@ export async function GET() {
       return acc;
     }, {} as Record<string, any>);
 
-    return NextResponse.json(config); // ✅ minimal payload
+    return NextResponse.json(config); 
   } catch (error) {
     console.error("Error fetching system config:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest) {
 
     await supabaseAdmin
       .from("system_configuration")
-      .upsert(updatePayloads, { onConflict: "key" }); // ✅ batch upsert
+      .upsert(updatePayloads, { onConflict: "key" }); 
 
     await supabaseAdmin.from("admin_audit_logs").insert({
       admin_user_id: user.id,
@@ -67,7 +67,7 @@ export async function PUT(request: NextRequest) {
       new_values: updates,
     });
 
-    return NextResponse.json({ success: true }); // ✅ no extra data
+    return NextResponse.json({ success: true }); 
   } catch (error) {
     console.error("Error updating system config:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

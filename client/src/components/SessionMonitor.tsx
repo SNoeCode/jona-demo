@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
@@ -11,23 +11,25 @@ interface SessionMonitorProps {
 export function SessionMonitor({ children }: SessionMonitorProps) {
   const router = useRouter();
   const supabase = createClientComponentClient();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasRedirectedRef = useRef(false);
 
   const handleSessionTimeout = useCallback(async () => {
+    if (hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+
     await supabase.auth.signOut();
     router.push('/login?timeout=true&message=Your session has expired');
   }, [supabase, router]);
 
   useEffect(() => {
-    // Session timeout: 30 minutes (1800000ms)
     const SESSION_TIMEOUT = 30 * 60 * 1000;
-    let timeoutId: NodeJS.Timeout;
 
     const resetTimeout = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleSessionTimeout, SESSION_TIMEOUT);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(handleSessionTimeout, SESSION_TIMEOUT);
     };
 
-    // Track user activity
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
     const activityHandler = () => resetTimeout();
 
@@ -35,23 +37,21 @@ export function SessionMonitor({ children }: SessionMonitorProps) {
       document.addEventListener(event, activityHandler);
     });
 
-    // Initialize timeout
     resetTimeout();
 
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
-        router.push('/login');
+        if (!hasRedirectedRef.current) {
+          hasRedirectedRef.current = true;
+          router.push('/login');
+        }
       } else if (event === 'TOKEN_REFRESHED') {
         resetTimeout();
       }
     });
 
-    // Cleanup
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       events.forEach(event => {
         document.removeEventListener(event, activityHandler);
       });
@@ -59,17 +59,15 @@ export function SessionMonitor({ children }: SessionMonitorProps) {
     };
   }, [supabase, router, handleSessionTimeout]);
 
-  // Handle window/tab close - trigger sign out
   useEffect(() => {
-    const handleBeforeUnload = async () => {
-      // Optional: Sign out on window close (remove this if you want persistent sessions)
+    const handleBeforeUnload = () => {
+      // Optional: sign out on tab close
       // await supabase.auth.signOut();
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [supabase]);
+  }, []);
 
   return <>{children}</>;
 }

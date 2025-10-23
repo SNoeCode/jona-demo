@@ -3,13 +3,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { toSerializableAuthUser, type AuthUser } from "@/types/user/authUser";
-
 export interface OrgAuthResult {
   user: AuthUser;
   organizationId: string;
   organizationSlug: string;
   organizationName: string;
   memberRole: string;
+  role?: string; // alias for callers expecting `role`
   membership: {
     id: string;
     role: string;
@@ -22,7 +22,7 @@ export interface OrgAuthResult {
 export async function requireOrgAuth(organizationSlug: string): Promise<OrgAuthResult> {
   const supabase = await createClient();
   
-  // Get authenticated user
+
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError || !user) {
@@ -30,7 +30,6 @@ export async function requireOrgAuth(organizationSlug: string): Promise<OrgAuthR
     redirect(`/login?redirect=/org/${organizationSlug}`);
   }
   
-  // Verify organization exists
   const { data: org, error: orgError } = await supabase
     .from('organizations')
     .select('id, name, slug')
@@ -140,22 +139,58 @@ export async function validateOrgMembership(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     
-    return {
-      user: toSerializableAuthUser(user),
-      organizationId: org.id,
-      organizationSlug: org.slug,
-      organizationName: org.name,
-      memberRole: membership.role,
-      membership: {
-        id: membership.id,
-        role: membership.role,
-        department: membership.department,
-        position: membership.position,
-        joined_at: membership.joined_at,
-      },
-    };
-  } catch (error) {
+   return {
+  user: toSerializableAuthUser(user),
+  organizationId: org.id,
+  organizationSlug: org.slug,
+  organizationName: org.name,
+  memberRole: membership.role,
+  role: membership.role, // alias
+  membership: {
+    id: membership.id,
+    role: membership.role,
+    department: membership.department,
+    position: membership.position,
+    joined_at: membership.joined_at,
+  },
+};
+  } catch (error) { 
     console.error('Org membership validation error:', error);
     return null;
   }
+}
+
+
+import { supabase } from "@/lib/supabaseClient";
+import { ORG_ROLE_PERMISSIONS } from "@/constants/rolePermissions";
+import type {
+  OrganizationContext,
+  Organization,
+  OrganizationMember,
+  UserRole,
+} from "@/types/organization";
+
+export async function fetchOrganizationForUser(
+  userId: string
+): Promise<OrganizationContext | null> {
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("*, organizations (*)")
+    .eq("user_id", userId)
+    .single();
+
+  if (membership?.organizations) {
+    const role = membership.role as UserRole;
+    
+    // Use ORG_ROLE_PERMISSIONS instead of ROLE_PERMISSIONS
+    const permissions = ORG_ROLE_PERMISSIONS[role] ?? ORG_ROLE_PERMISSIONS["user"];
+
+    return {
+      organization: membership.organizations as Organization,
+      membership: membership as OrganizationMember,
+      permissions,
+    };
+  }
+
+  return null;
 }

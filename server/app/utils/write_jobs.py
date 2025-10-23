@@ -1,9 +1,11 @@
 from pathlib import Path
 from datetime import datetime
 import csv
+from typing import Optional
+
 from app.config.config_utils import get_output_folder
 
-def write_jobs_csv(jobs: list, folder_name: str = None, label: str = "jobs"):
+def write_jobs_csv(jobs: list, folder_name: Optional[str] = None, label: str = "jobs") -> None:
     if not jobs:
         print("⚠️ No jobs to write.")
         return
@@ -12,7 +14,8 @@ def write_jobs_csv(jobs: list, folder_name: str = None, label: str = "jobs"):
     filename = f"{timestamp}_{label}.csv"
 
     # Use custom folder if provided, else default
-    target_folder = Path(folder_name) if folder_name else Path(get_output_folder())
+    # target_folder = Path(folder_name) if folder_name else Path(get_output_folder())
+    target_folder = Path(folder_name) if folder_name is not None else Path(get_output_folder())
     target_folder.mkdir(parents=True, exist_ok=True)
 
     filepath = target_folder / filename

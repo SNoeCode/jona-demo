@@ -1,4 +1,3 @@
-# app/utils/auth.py
 
 import os
 import logging
@@ -40,7 +39,7 @@ def decode_jwt_token(token: str, verify_signature: bool = True) -> dict:
                 raise HTTPException(status_code=500, detail="JWT secret not configured")
             return jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
         else:
-            return jwt.decode(token, options={"verify_signature": False})
+            return jwt.decode(token, "dummy-key", options={"verify_signature": False})
     except JWTError as e:
         logger.warning(f"JWT decode error: {e}")
         raise HTTPException(status_code=401, detail="Invalid auth token")

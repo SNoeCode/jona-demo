@@ -10,12 +10,11 @@ export default function HandleOAuthRedirect() {
 
   useEffect(() => {
     const handleRedirect = async () => {
-      // Only run if we're actually on a redirect page
       const urlParams = new URLSearchParams(window.location.search);
       const authCode = urlParams.get("code");
       const error = urlParams.get("error");
       
-      // Exit early if no OAuth parameters are present
+
       if (!authCode && !error) {
         return;
       }

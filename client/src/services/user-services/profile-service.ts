@@ -1,20 +1,12 @@
 // import { supabase } from "@/lib/supabaseClient";
 import { UserProfile, EnhancedUserProfile, isUserUsageSummary, UsagePayload} from "@/types/user/index";
-// import { BillingService } from "./billing-service";
-import {  } from "./usage-service";
 import { getCurrentSubscription} from "./subscription-service";
 import { InsertUserProfilePayload } from "@/types/user/index";
 import { getUserUsage } from "@/app/services/server-user/server_user_usage";
 import { supabase } from "@/lib/supabaseClient";
-// function getServerClient() {
-//   return createServerComponentClient<Database>({
-//     cookies: () => cookies(),
-//   });
-// }
-  export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-   
-    // const supabase = getServerClient(); // ✅ server-safe
 
+  export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+      
     try {
       const { data, error } = await supabase
         .from("user_profiles")
@@ -39,8 +31,7 @@ export async function updateUserProfile(
   updates: Partial<UserProfile>
 ): Promise<UserProfile | null> {
   try {
-    // const supabase = getServerClient(); // ✅ server-safe
-
+   
     const { data, error } = await supabase
       .from("user_profiles")
       .upsert({
@@ -65,9 +56,7 @@ export async function updateUserProfile(
 
  export async function uploadAvatar(userId: string, file: File): Promise<{ avatar_url: string } | null> {
     try {
-          // const supabase = getServerClient(); // ✅ server-safe
-
-      const fileExt = file.name.split('.').pop();
+          const fileExt = file.name.split('.').pop();
       const fileName = `${userId}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
@@ -102,8 +91,7 @@ export async function updateUserProfile(
       };
 
       console.log("📦 Creating user profile:", profileData);
-    // const supabase = getServerClient(); // ✅ server-safe
-
+   
       const { data, error } = await supabase
         .from("user_profiles")
         .insert([profileData])
@@ -121,48 +109,6 @@ export async function updateUserProfile(
       throw err;
     }
   }
-
-
-  //   static async getEnhancedUserProfile(userId: string): Promise<EnhancedUserProfile | null> {
-  //   try {
-  //     const [profile, subscription, usage] = await Promise.allSettled([
-  //       this.getUserProfile(userId),
-  //      SubscriptionService.getCurrentSubscription(userId),
-  //       UsageService.getUserUsage(userId)
-  //     ]);
-
-  //     const baseProfile = profile.status === 'fulfilled' ? profile.value : null;
-      
-  //     if (!baseProfile) {
-  //       // Create default profile if none exists
-  //       const defaultProfile: Partial<UserProfile> = {
-  //         id: userId,
-  //         created_at: new Date().toISOString(),
-  //         updated_at: new Date().toISOString(),
-  //       };
-        
-  //       const createdProfile = await this.updateUserProfile(userId, defaultProfile);
-  //       if (!createdProfile) return null;
-        
-  //       return {
-  //         ...createdProfile,
-  //         current_subscription: subscription.status === 'fulfilled' ? subscription.value : null,
-  //         usage: usage.status === 'fulfilled' ? usage.value : null,
-  //         lastSeen: new Date().toISOString(),
-  //       };
-  //     }
-
-  //     return {
-  //       ...baseProfile,
-  //       current_subscription: subscription.status === 'fulfilled' ? subscription.value : null,
-  //       usage: usage.status === 'fulfilled' ? usage.value : null,
-  //       lastSeen: new Date().toISOString(),
-  //     };
-  //   } catch (error) {
-  //     console.error("getEnhancedUserProfile error:", error);
-  //     return null;
-  //   }
-  // }
   export async function getEnhancedUserProfile(userId: string): Promise<EnhancedUserProfile | null> {
   try {
     const [profile, subscription, usage] = await Promise.allSettled([

@@ -1,274 +1,212 @@
-// client/src/app/org/select/page.tsx
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  Building2,
-  ChevronRight,
-  Plus,
-  Users,
-  Calendar,
-  Activity,
-  Settings,
-} from "lucide-react";
-
-interface UserOrganization {
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Building2, Users, Briefcase, ChevronRight } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient'; 
+interface Organization {
   organization_id: string;
   organization_name: string;
   organization_slug: string;
   user_role: string;
-  joined_at: string;
-  member_count?: number;
-  active_jobs?: number;
+  member_count: number;
+  active_jobs: number;
 }
 
-export default function OrganizationSelectPage() {
+export default function OrgSelectPage() {
   const router = useRouter();
-  const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const selectOrganization = useCallback(
-    async (orgId: string, orgSlug: string) => {
-      setSelectedOrg(orgId);
-      setError(null);
-
-      try {
-        const response = await fetch("/api/user/update-current-org", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ organizationId: orgId }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Small delay to ensure session is updated
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          // ✅ FIXED: Navigate to the correct org dashboard using slug
-          router.push(`/org/${orgSlug}/dashboard`);
-        } else {
-          setError(data.message || "Failed to select organization");
-          setSelectedOrg(null);
-        }
-      } catch (error) {
-        console.error("Error selecting organization:", error);
-        setError("Failed to select organization. Please try again.");
-        setSelectedOrg(null);
-      }
-    },
-    [router]
-  );
-
-  const fetchUserOrganizations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/org/user-organizations", {
-        credentials: "include"
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch organizations");
-      }
-
-      if (!data.organizations || data.organizations.length === 0) {
-        router.push("/org/register");
-        return;
-      }
-
-      // ✅ FIXED: If only one org, select it and route to its dashboard
-      if (data.organizations.length === 1) {
-        const org = data.organizations[0];
-        await selectOrganization(org.organization_id, org.organization_slug);
-        return;
-      }
-
-      setOrganizations(data.organizations);
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load organizations"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [router, selectOrganization]);
+  const [selecting, setSelecting] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUserOrganizations();
-  }, [fetchUserOrganizations]);
+    fetchOrganizations();
+  }, []);
+const fetchOrganizations = async () => {
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('No valid session found');
+    }
+
+    const response = await fetch('/api/org/user-organizations', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Organizations fetch failed:', errorText);
+      throw new Error('Failed to fetch organizations');
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to fetch organizations');
+    }
+
+    setOrganizations(data.organizations || []);
+  } catch (err: any) {
+    console.error('Failed to fetch organizations:', err);
+    setError(err.message || 'Failed to load organizations');
+  } finally {
+    setLoading(false);
+  }
+};
+const selectOrganization = async (org: Organization) => {
+  setSelecting(org.organization_id);
+  setError(null);
+
+  try {
+    // 🔐 Get the current session token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error('No valid session found');
+    }
+
+    // ✅ Pass the token in the Authorization header
+    const response = await fetch('/api/org/update-current-org', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        organizationId: org.organization_id,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Update org failed:', errorText);
+      throw new Error('Failed to set current organization');
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to set current organization');
+    }
+
+    // Redirect based on role
+    if (org.user_role === 'owner') {
+      router.push(`/org/owner/${org.organization_slug}/dashboard`);
+    } else {
+      router.push(`/org/${org.organization_slug}/dashboard`);
+    }
+  } catch (err: any) {
+    console.error('Failed to select organization:', err);
+    setError(err.message || 'Failed to select organization');
+    setSelecting(null);
+  }
+};
+
+
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Loading organizations...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center max-w-md">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-red-800 dark:text-red-400 mb-2">
-              Error Loading Organizations
-            </h2>
-            <p className="text-red-600 dark:text-red-300 mb-4">{error}</p>
-            <button
-              onClick={() => fetchUserOrganizations()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <Building2 className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Building2 className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Select Organization
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400">
-            Choose which organization you want to work with
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Choose which organization you want to access
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {organizations.map((org) => (
-            <div
-              key={org.organization_id}
-              onClick={() => selectOrganization(org.organization_id, org.organization_slug)}
-              className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 ${
-                selectedOrg === org.organization_id
-                  ? "border-blue-500 ring-2 ring-blue-200 opacity-75"
-                  : "border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-              }`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
-                  <Building2 className="h-8 w-8 text-white" />
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    org.user_role === "owner" || org.user_role === "org_admin"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      : org.user_role === "admin" ||
-                        org.user_role === "org_manager"
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  {org.user_role}
-                </span>
-              </div>
+        {error && (
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                {org.organization_name}
-              </h3>
-
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                @{org.organization_slug}
-              </p>
-
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <Users className="h-4 w-4 mr-2" />
-                  <span>{org.member_count || 0} members</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <Activity className="h-4 w-4 mr-2" />
-                  <span>{org.active_jobs || 0} active jobs</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <span>
-                    Joined {new Date(org.joined_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <button
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium text-sm flex items-center"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    selectOrganization(org.organization_id, org.organization_slug);
-                  }}
-                  disabled={selectedOrg === org.organization_id}
-                >
-                  {selectedOrg === org.organization_id ? (
-                    "Selecting..."
-                  ) : (
-                    <>
-                      Select
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </>
-                  )}
-                </button>
-                {["owner", "admin", "org_admin", "org_manager"].includes(
-                  org.user_role
-                ) && (
-                  <button
-                    className="text-gray-600 hover:text-gray-700 dark:text-gray-400"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/org/${org.organization_slug}/settings`);
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* Create New Organization Card */}
-          <Link
-            href="/org/register"
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 flex flex-col items-center justify-center text-center min-h-[280px]"
-          >
-            <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-              <Plus className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Create New Organization
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Set up a new workspace for your team
+        {organizations.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              You're not a member of any organizations yet.
             </p>
-          </Link>
-        </div>
+            <button
+              onClick={() => router.push('/org/register')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
+            >
+              Create Organization
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {organizations.map((org) => (
+              <button
+                key={org.organization_id}
+                onClick={() => selectOrganization(org)}
+                disabled={selecting !== null}
+                className="w-full bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start space-x-4 flex-1">
+                    <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-lg">
+                      <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    
+                    <div className="flex-1 text-left">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                        {org.organization_name}
+                      </h3>
+                      
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                          {org.user_role}
+                        </span>
+                        
+                        <span className="flex items-center">
+                          <Users className="h-4 w-4 mr-1" />
+                          {org.member_count} {org.member_count === 1 ? 'member' : 'members'}
+                        </span>
+                        
+                        <span className="flex items-center">
+                          <Briefcase className="h-4 w-4 mr-1" />
+                          {org.active_jobs} {org.active_jobs === 1 ? 'job' : 'jobs'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-        <div className="text-center">
-          <Link
-            href="/dashboard"
-            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center"
+                  <div className="ml-4">
+                    {selecting === org.organization_id ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                    ) : (
+                      <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => router.push('/org/register')}
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold"
           >
-            Continue with personal account
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
+            + Create New Organization
+          </button>
         </div>
       </div>
     </div>

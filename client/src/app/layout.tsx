@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google';
-import { AuthUserProvider } from '@/context/AuthUserContext';
+// import { AuthUserProvider } from '@/context/AuthUserContext';
+import { AuthProvider } from '@/context/AuthUserContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 // import { SessionTimeoutProvider } from '@/context/SessionTimeoutContext';
 import NavbarAppRouter from '@/components/navbar/Navbar';
@@ -24,7 +25,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider>
-          <AuthUserProvider>
+          <AuthProvider>
             <SessionMonitor>
 
             {/* <SessionTimeoutProvider> */}
@@ -33,7 +34,7 @@ export default function RootLayout({
               <Footer />
             {/* </SessionTimeoutProvider> */}
             </SessionMonitor>
-          </AuthUserProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

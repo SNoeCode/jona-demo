@@ -1,17 +1,14 @@
-// constants/rolePermissions.ts
-
-// Core role definitions - MUST match across all files
 export type UserRole =
-  | "admin"           // System admin - HIGHEST privilege
-  | "tenant_owner"    // Tenant owner
-  | "org_admin"       // Org admin
-  | "org_manager"     // Org manager
-  | "org_user"        // Org member
-  | "recruiter"       // Recruiter
-  | "unassigned_user" // No org
-  | "user";           // Default user
+  | "admin"
+  | "tenant_owner"
+  | "org_admin"
+  | "org_manager"
+  | "org_user"
+  | "recruiter"
+  | "unassigned_user"
+  | "user";
 
-// System-level permissions
+
 export type RolePermissionsKey = {
   canViewAllOrgs: boolean;
   canManageOrg: boolean;
@@ -24,8 +21,8 @@ export type RolePermissionsKey = {
   canManageSettings: boolean;
   canManageProfile: boolean;
   canApplyToJobs: boolean;
-  canManageSystem: boolean;      // NEW: System-level management
-  canViewAuditLogs: boolean;     // NEW: View audit logs
+  canManageSystem: boolean; 
+  canViewAuditLogs: boolean; 
 };
 
 // Organization-level permissions
@@ -41,7 +38,6 @@ export type OrgPermissions = {
 // System-level role permissions
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissionsKey> = {
   admin: {
-    // SYSTEM ADMIN - FULL ACCESS TO EVERYTHING
     canViewAllOrgs: true,
     canManageOrg: true,
     canManageUsers: true,
@@ -60,7 +56,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissionsKey> = {
     canViewAllOrgs: true,
     canManageOrg: true,
     canManageUsers: true,
-    canViewUserData: false, // Cannot see org user data
+    canViewUserData: false,
     canManageJobs: false,
     canViewJobs: false,
     requiresOrgId: false,
@@ -163,10 +159,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissionsKey> = {
   },
 };
 
-// Organization-level permissions
 export const ORG_ROLE_PERMISSIONS: Record<UserRole, OrgPermissions> = {
   admin: {
-    // Admin has full org permissions
     canManageMembers: true,
     canManageSettings: true,
     canManageBilling: true,
@@ -232,7 +226,6 @@ export const ORG_ROLE_PERMISSIONS: Record<UserRole, OrgPermissions> = {
   },
 };
 
-// Helper to check system-level permissions
 export function hasPermission(
   role: UserRole,
   permission: keyof RolePermissionsKey
@@ -240,7 +233,6 @@ export function hasPermission(
   return ROLE_PERMISSIONS[role]?.[permission] ?? false;
 }
 
-// Helper to check org-level permissions
 export function hasOrgPermission(
   role: UserRole,
   permission: keyof OrgPermissions
@@ -248,7 +240,6 @@ export function hasOrgPermission(
   return ORG_ROLE_PERMISSIONS[role]?.[permission] ?? false;
 }
 
-// Route determination helper
 export function getRouteForRole(
   role: UserRole,
   organizationId?: string
@@ -275,7 +266,6 @@ export function getRouteForRole(
   }
 }
 
-// Helper to check if user is admin
 export function isSystemAdmin(role: UserRole): boolean {
   return role === "admin";
 }

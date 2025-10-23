@@ -5,13 +5,13 @@ export interface AdminResume {
   user_name: string;
   user_email: string;
   
-  // File information - supporting both naming conventions
+
   original_filename?: string;
-  filename?: string; // Maps to original_filename in DB
+  filename?: string; 
   file_url?: string;
-  file_path?: string; // Maps to file_url in DB
+  file_path?: string; 
   file_type?: string;
-  content_type?: string; // Maps to file_type in DB
+  content_type?: string; 
   file_size?: number;
   
   // Resume content and analysis

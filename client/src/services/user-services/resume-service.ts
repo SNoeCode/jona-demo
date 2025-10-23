@@ -1,9 +1,7 @@
-
 import { supabase } from "@/lib/supabaseClient";
 import type { Resume, AuthUser } from "@/types/user/index";
 
 export class ResumeService {
-  // 📤 Upload resume file to Supabase Storage
   static async uploadResume(file: File, userId: string): Promise<string> {
     const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
     const path = `user_${userId}/${safeName}`;
@@ -16,17 +14,13 @@ export class ResumeService {
 
     return data.path;
   }
-
-  // 🌐 Get public URL for a resume file
-  static getResumePublicUrl(userId: string, fileName: string): string {
+ static getResumePublicUrl(userId: string, fileName: string): string {
     const { data } = supabase.storage
       .from("resumes")
       .getPublicUrl(`user_${userId}/${fileName}`);
 
     return data.publicUrl;
   }
-
-  // 📝 Insert resume metadata into Supabase DB
   static async insertResumeMetadata(
     userId: string,
     file: File,
@@ -49,8 +43,6 @@ export class ResumeService {
 
     return true;
   }
-
-  // 🧱 Build a complete Resume object
   static async buildResumeObject(
     file: File,
     user: AuthUser,
@@ -72,8 +64,6 @@ export class ResumeService {
       is_default: true,
     };
   }
-
-  // 📄 Fetch the default resume for a user
   static async getDefaultResume(userId: string): Promise<Resume | null> {
     const { data, error } = await supabase
       .from("resumes")
@@ -89,9 +79,7 @@ export class ResumeService {
 
     return data as Resume | null;
   }
-
-  // 📚 Fetch all resumes for a user
-  static async getUserResumes(userId: string): Promise<Resume[]> {
+static async getUserResumes(userId: string): Promise<Resume[]> {
     const { data, error } = await supabase
       .from("resumes")
       .select("*")
@@ -105,8 +93,6 @@ export class ResumeService {
 
     return data as Resume[];
   }
-
-  // 🛠️ Update resume metadata
   static async updateResume(resume: Partial<Resume> & { id: string }): Promise<boolean> {
     const { error } = await supabase
       .from("resumes")
@@ -121,9 +107,7 @@ export class ResumeService {
       console.error("❌ Error updating resume:", error.message);
       return false;
     }
-
-    // Optional: log admin action
-    await supabase.from("admin_logs").insert({
+   await supabase.from("admin_logs").insert({
       action: "resume_updated",
       user_id: resume.user_id,
       details: {

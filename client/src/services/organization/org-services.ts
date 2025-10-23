@@ -1,259 +1,390 @@
-// types/organization.ts
-import { OrgPermissions } from "@/constants/rolePermissions";
+'use server';
 
-export type OrgSize = "1-10" | "11-50" | "51-200" | "201-500" | "500+";
+import { createClient } from '@/lib/supabase/server';
+import type { OrgRole, Organization } from '@/types/organization';
+import type { Database } from '@/types/database';
+import { ROLE_PERMISSIONS } from '@/constants/rolePermissions'; 
 
-export type SubscriptionStatus =
-  | "active"
-  | "canceled"
-  | "past_due"
-  | "trialing"
-  | "paused";
+type UserOrgRole = Database['public']['Tables']['user_org_roles']['Row'];
 
-// Use this for organization membership roles only
-export type OrgRole = "org_admin" | "org_manager" | "org_user";
+export class OrgService {
+  static async getUserOrgRole(userId: string): Promise<UserOrgRole | null> {
+    const supabase = await createClient();
 
-// Use this for app-wide user roles
-export type UserRole =
-  | "admin"           // System admin - FIRST in hierarchy
-  | "tenant_owner"    // Tenant owner
-  | "org_admin"       // Org admin
-  | "org_manager"     // Org manager
-  | "org_user"        // Org member
-  | "recruiter"       // Recruiter
-  | "unassigned_user" // No org
-  | "user";           // Default
+    const { data, error } = await supabase
+      .from('user_org_roles')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
 
-export interface Organization {
-  id: string;
-  tenant_id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  logo_url?: string;
-  website?: string;
-  industry?: string;
-  size?: OrgSize;
-  settings?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+    if (error) {
+      console.error('Error fetching user org role:', error);
+      return null;
+    }
 
-export interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
-  owner_user_id: string;
-  settings?: Record<string, unknown>;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  organizations?: Organization[];
-}
+    return data;
+  }
 
-export interface OrganizationMember {
-  id: string;
-  organization_id: string;
-  user_id: string;
-  role: OrgRole;
-  department?: string;
-  position?: string;
-  joined_at: string;
-  invited_by?: string;
-  invitation_accepted: boolean;
-  invitation_token?: string;
-  invitation_expires_at?: string;
-  permissions?: Record<string, unknown>;
-  is_active: boolean;
-  users?: {
-    id: string;
-    email: string;
-    full_name?: string;
-    avatar_url?: string;
-    created_at: string;
-  };
-  organizations?: Organization;
-}
+  static async getUserOrganizations(userId: string): Promise<Organization[]> {
+    const supabase = await createClient();
+    const userRole = await this.getUserOrgRole(userId);
+    if (!userRole) return [];
 
-export interface OrganizationInvitation {
-  id: string;
-  organization_id: string;
-  email: string;
-  role: OrgRole;
-  invited_by: string;
-  token: string;
-  expires_at: string;
-  accepted_at?: string;
-  created_at: string;
-  metadata?: Record<string, unknown>;
-  organizations?: Organization;
-}
+    // tenant_id does not exist on userRole, so we cannot filter by it
+    if (userRole.role === 'tenant_owner') {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        // You may want to filter by a tenant_id if you have it elsewhere
+        // .eq('tenant_id', someTenantId)
+        .eq('is_active', true);
 
-export interface OrganizationSubscription {
-  id: string;
-  organization_id: string;
-  plan_id?: string;
-  status: SubscriptionStatus;
-  current_period_start?: string;
-  current_period_end?: string;
-  cancel_at_period_end: boolean;
-  canceled_at?: string;
-  stripe_subscription_id?: string;
-  stripe_customer_id?: string;
-  seats_included: number;
-  seats_used: number;
-  created_at: string;
-  updated_at: string;
-}
+      if (error) {
+        console.error('Error fetching tenant organizations:', error);
+        return [];
+      }
 
-export interface OrganizationUsage {
-  id: string;
-  organization_id: string;
-  month: string;
-  jobs_scraped: number;
-  resumes_processed: number;
-  applications_sent: number;
-  api_calls: number;
-  storage_used_mb: number;
-  created_at: string;
-  updated_at: string;
-}
+      return data || [];
+    }
 
-export interface OrganizationAuditLog {
-  id: string;
-  organization_id: string;
-  user_id?: string;
-  action: string;
-  entity_type?: string;
-  entity_id?: string;
-  old_values?: Record<string, unknown>;
-  new_values?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
-  created_at: string;
-}
+    if (userRole.organization_id) {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', userRole.organization_id)
+        .eq('is_active', true)
+        .single();
 
-export interface UserOrgRole {
-  id: string;
-  user_id: string;
-  organization_id?: string;
-  tenant_id?: string;
-  role: UserRole;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  
-}
+      if (error) {
+        console.error('Error fetching user organization:', error);
+        return [];
+      }
 
-export interface UserWithOrgRole {
-  id: string;
-  email: string;
-  role: UserRole;
-  organization?: Organization;
-  tenant?: Tenant;
-  is_active: boolean;
-}
+      return data ? [data] : [];
+    }
 
-export interface UserWithOrganization {
-  id: string;
-  email: string;
-  role: UserRole;
-  current_organization_id?: string;
-  is_admin?: boolean;              // ADDED
-  is_org_owner?: boolean;
-  is_tenant_owner?: boolean;
-  current_organization?: Organization;
-  organization_members?: OrganizationMember[];
-  owned_tenants?: Tenant[];
-}
+    return [];
+  }
 
-// Organization context for components
-export interface OrganizationContext {
-  organization: Organization;
-  membership: OrganizationMember;
-  permissions: OrgPermissions;
-}
+  static async canAccessOrganization(
+    userId: string,
+    organizationId: string
+  ): Promise<boolean> {
+    const supabase = await createClient();
+    const userRole = await this.getUserOrgRole(userId);
+    if (!userRole) return false;
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: UserRole;
-  aud: string;
-  created_at: string;
-  app_metadata: Record<string, unknown>;
-  user_metadata: {
-    full_name?: string;
-    role?: string;
-    name?: string;
-    is_admin?: boolean;              // ADDED
-    is_org_owner?: boolean;
-    is_tenant_owner?: boolean;
-    current_organization_id?: string;
-  };
-  current_organization_id?: string;
-  is_admin?: boolean;                // ADDED
-  is_org_owner?: boolean;
-  is_tenant_owner?: boolean;
-  organizations?: OrganizationMember[];
-}
+    // tenant_id does not exist on userRole, so we cannot filter by it
+    if (userRole.role === 'tenant_owner') {
+      const { data } = await supabase
+        .from('organizations')
+        .select('tenant_id')
+        .eq('id', organizationId)
+        .single();
 
-// Access control helper - UPDATED
-export function canAccessOrganization(
-  userRole: UserRole,
-  userOrgId?: string,
-  targetOrgId?: string,
-  userTenantId?: string,
-  targetTenantId?: string,
-  isAdmin?: boolean,
-  isTenantOwner?: boolean
-): boolean {
-  // System admin can access everything
-  if (isAdmin) {
+      // Fix: data may be null or not have tenant_id, so check for data and compare with userRole.organization_id
+      if (data && typeof data === 'object' && data !== null && (data as { tenant_id?: string }).tenant_id !== undefined) {
+        return (data as { tenant_id: string }).tenant_id === userRole.organization_id;
+      }
+      return false;
+    }
+
+    return userRole.organization_id === organizationId;
+  }
+
+  static async getOrganizationUsers(
+    organizationId: string,
+    requestingUserId: string
+  ): Promise<UserOrgRole[]> {
+    const supabase = await createClient();
+    const canAccess = await this.canAccessOrganization(
+      requestingUserId,
+      organizationId
+    );
+
+    if (!canAccess) {
+      throw new Error('Unauthorized: Cannot access this organization');
+    }
+
+    const { data, error } = await supabase
+      .from('user_org_roles')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching organization users:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  static async assignRole(
+    userId: string,
+    role: OrgRole,
+    organizationId?: string,
+    tenantId?: string
+  ): Promise<UserOrgRole | null> {
+    const supabase = await createClient();
+
+    const payload: Partial<UserOrgRole> = {
+      user_id: userId,
+      role,
+      organization_id: organizationId,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('user_org_roles' as any)
+      .insert(payload as any)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error assigning role:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  static async removeUserFromOrganization(
+    userId: string,
+    organizationId: string
+  ): Promise<boolean> {
+    const supabase = await createClient();
+
+    const { error } = await (supabase as any)
+      .from('user_org_roles')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      console.error('Error removing user from organization:', error);
+      return false;
+    }
+
     return true;
   }
 
-  // Tenant owner can access all orgs in their tenant
-  if (isTenantOwner || userRole === "tenant_owner") {
-    return userTenantId === targetTenantId;
+  static async hasPermission(
+    userId: string,
+    permission: string
+  ): Promise<boolean> {
+    const userRole = await this.getUserOrgRole(userId);
+    if (!userRole) return false;
+
+    const permissions = ROLE_PERMISSIONS[userRole.role as keyof typeof ROLE_PERMISSIONS];
+    return permissions?.[permission as keyof typeof permissions] === true;
   }
-
-  // Org roles need matching org ID
-  if (["org_admin", "org_manager", "org_user"].includes(userRole)) {
-    return userOrgId === targetOrgId;
-  }
-
-  // Recruiter can access their org
-  if (userRole === "recruiter") {
-    return userOrgId === targetOrgId;
-  }
-
-  // Unassigned users and regular users cannot access orgs
-  return false;
 }
+// 'use server';
 
-// Helper to check if user can manage organization
-export function canManageOrganization(
-  userRole: UserRole,
-  isAdmin?: boolean,
-  isTenantOwner?: boolean,
-  isOrgOwner?: boolean
-): boolean {
-  if (isAdmin || isTenantOwner) return true;
-  if (isOrgOwner || userRole === "org_admin") return true;
-  return false;
-}
+// import { createClient } from '@/lib/supabase/server';
+// import type { OrgRole, UserOrgRole, Organization } from '@/types/organization';
+// import {Database} from '@/types/database';
+// export class OrgService {
+//   /**
+//    * Get user's organization role
+//    */
+//   static async getUserOrgRole(userId: string): Promise<UserOrgRole | null> {
+//     const supabase = await createClient();
 
-// Helper to check if user can view organization data
-export function canViewOrganizationData(
-  userRole: UserRole,
-  isAdmin?: boolean,
-  isTenantOwner?: boolean
-): boolean {
-  if (isAdmin) return true;
-  // Tenant owner can see org data but NOT user data
-  if (isTenantOwner) return true;
-  if (["org_admin", "org_manager"].includes(userRole)) return true;
-  return false;
-}
+//     const { data, error } = await supabase
+//       .from('user_org_roles')
+//       .select('*')
+//       .eq('user_id', userId)
+//       .eq('is_active', true)
+//       .single();
+
+//     if (error) {
+//       console.error('Error fetching user org role:', error);
+//       return null;
+//     }
+
+//     return data;
+//   }
+
+//   /**
+//    * Get all organizations a user has access to
+//    */
+//   static async getUserOrganizations(userId: string): Promise<Organization[]> {
+//     const supabase = await createClient();
+
+//     // Get user's role first
+//     const userRole = await this.getUserOrgRole(userId);
+//     if (!userRole) return [];
+
+//     // If tenant owner, get all orgs in tenant
+//     if (userRole.role === 'tenant_owner' && userRole.tenant_id) {
+//       const { data, error } = await supabase
+//         .from('organizations')
+//         .select('*')
+//         .eq('tenant_id', userRole.tenant_id)
+//         .eq('is_active', true);
+
+//       if (error) {
+//         console.error('Error fetching tenant organizations:', error);
+//         return [];
+//       }
+
+//       return data || [];
+//     }
+
+//     // Otherwise, get user's specific organization
+//     if (userRole.organization_id) {
+//       const { data, error } = await supabase
+//         .from('organizations')
+//         .select('*')
+//         .eq('id', userRole.organization_id)
+//         .eq('is_active', true)
+//         .single();
+
+//       if (error) {
+//         console.error('Error fetching user organization:', error);
+//         return [];
+//       }
+
+//       return data ? [data] : [];
+//     }
+
+//     return [];
+//   }
+
+//   /**
+//    * Check if user has permission to access an organization
+//    */
+//   static async canAccessOrganization(
+//     userId: string,
+//     organizationId: string
+//   ): Promise<boolean> {
+//     const supabase = await createClient();
+
+//     const userRole = await this.getUserOrgRole(userId);
+//     if (!userRole) return false;
+
+//     // Tenant owners can access all orgs in their tenant
+//     if (userRole.role === 'tenant_owner' && userRole.tenant_id) {
+//       const { data } = await supabase
+//         .from('organizations')
+//         .select('tenant_id')
+//         .eq('id', organizationId)
+//         .single();
+
+//       return data?.tenant_id === userRole.tenant_id;
+//     }
+
+//     // Direct organization access
+//     return userRole.organization_id === organizationId;
+//   }
+
+//   /**
+//    * Get users in an organization (for org admins/managers)
+//    */
+//   static async getOrganizationUsers(
+//     organizationId: string,
+//     requestingUserId: string
+//   ): Promise<UserOrgRole[]> {
+//     const supabase = await createClient();
+
+//     // Check if requesting user has permission
+//     const canAccess = await this.canAccessOrganization(
+//       requestingUserId,
+//       organizationId
+//     );
+
+//     if (!canAccess) {
+//       throw new Error('Unauthorized: Cannot access this organization');
+//     }
+
+//     const { data, error } = await supabase
+//       .from('user_org_roles')
+//       .select('*')
+//       .eq('organization_id', organizationId)
+//       .eq('is_active', true);
+
+//     if (error) {
+//       console.error('Error fetching organization users:', error);
+//       return [];
+//     }
+
+//     return data || [];
+//   }
+
+//   /**
+//    * Assign role to user
+//    */
+//   static async assignRole(
+//     userId: string,
+//     role: OrgRole,
+//     organizationId?: string,
+//     tenantId?: string
+//   ): Promise<UserOrgRole | null> {
+//     const supabase = await createClient();
+
+//     const { data, error } = await supabase
+//       .from('user_org_roles')
+//       .upsert({
+//         user_id: userId,
+//         role,
+//         organization_id: organizationId,
+//         tenant_id: tenantId,
+//         is_active: true,
+//         updated_at: new Date().toISOString(),
+//       })
+//       .select()
+//       .single();
+
+//     if (error) {
+//       console.error('Error assigning role:', error);
+//       return null;
+//     }
+
+//     return data;
+//   }
+
+//   /**
+//    * Remove user from organization
+//    */
+//   static async removeUserFromOrganization(
+//     userId: string,
+//     organizationId: string
+//   ): Promise<boolean> {
+//     const supabase = await createClient();
+
+//     const { error } = await supabase
+//       .from('user_org_roles')
+//       .update({ is_active: false })
+//       .eq('user_id', userId)
+//       .eq('organization_id', organizationId);
+
+//     if (error) {
+//       console.error('Error removing user from organization:', error);
+//       return false;
+//     }
+
+//     return true;
+//   }
+
+//   /**
+//    * Check if user has specific permission
+//    */
+//   static async hasPermission(
+//     userId: string,
+//     permission: string
+//   ): Promise<boolean> {
+//     const userRole = await this.getUserOrgRole(userId);
+//     if (!userRole) return false;
+
+//     // Import permission checks from your types
+//     const { ROLE_PERMISSIONS } = await import('@/types/organization');
+//     const permissions = ROLE_PERMISSIONS[userRole.role];
+
+//     return permissions?.[permission as keyof typeof permissions] === true;
+//   }
+// }
+
+

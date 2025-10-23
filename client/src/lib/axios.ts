@@ -7,10 +7,8 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
   },
-  timeout: 10000, // Optional: set timeout for requests
+  timeout: 10000,
 });
-
-// Optional: Axios interceptors for logging or error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -1,4 +1,3 @@
-// client/src/app/api/admin/subscriptions/stats/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -8,7 +7,6 @@ export async function GET(request: NextRequest) {
   try {
     const supabaseAdmin = await getSupabaseAdmin();
 
-    // Get all subscriptions
     const { data: allSubscriptions, error: subsError } = await supabaseAdmin
       .from('user_subscriptions')
       .select(`
@@ -25,9 +23,7 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching subscriptions:', subsError);
       throw subsError;
     }
-
-    // Get all successful payments
-    const { data: allPayments, error: paymentsError } = await supabaseAdmin
+   const { data: allPayments, error: paymentsError } = await supabaseAdmin
       .from('subscription_payments')
       .select('amount, created_at, status')
       .in('status', ['succeeded', 'paid']);
@@ -36,9 +32,7 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching payments:', paymentsError);
       throw paymentsError;
     }
-
-    // Calculate stats
-    const activeSubscriptions = allSubscriptions?.filter(
+  const activeSubscriptions = allSubscriptions?.filter(
       sub => sub.status === 'active'
     ).length || 0;
 
@@ -46,9 +40,7 @@ export async function GET(request: NextRequest) {
       (sum, payment) => sum + (payment.amount || 0), 
       0
     ) || 0;
-
-    // Calculate MRR (Monthly Recurring Revenue)
-    const monthlyRecurringRevenue = allSubscriptions?.reduce((sum, sub) => {
+   const monthlyRecurringRevenue = allSubscriptions?.reduce((sum, sub) => {
       if (sub.status === 'active' && sub.subscription_plans) {
         if (sub.billing_cycle === 'monthly') {
           return sum + (sub.subscription_plans.price_monthly || 0);
@@ -59,9 +51,7 @@ export async function GET(request: NextRequest) {
       }
       return sum;
     }, 0) || 0;
-
-    // Calculate churn rate (simplified - last 30 days)
-    const thirtyDaysAgo = new Date();
+ const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const canceledLast30Days = allSubscriptions?.filter(sub => {
@@ -73,13 +63,9 @@ export async function GET(request: NextRequest) {
     const churnRate = activeSubscriptions > 0 
       ? ((canceledLast30Days / (activeSubscriptions + canceledLast30Days)) * 100).toFixed(2)
       : '0.00';
-
-    // Calculate average revenue per user
-    const totalUsers = allSubscriptions?.length || 1;
+ const totalUsers = allSubscriptions?.length || 1;
     const averageRevenuePerUser = totalRevenue / totalUsers;
-
-    // Plan distribution
-    const planDistribution = {
+const planDistribution = {
       free: 0,
       pro: 0,
       enterprise: 0
@@ -95,9 +81,7 @@ export async function GET(request: NextRequest) {
         planDistribution.enterprise++;
       }
     });
-
-    // Recent payment history (last 10 payments)
-    const recentPayments = allPayments
+   const recentPayments = allPayments
       ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 10) || [];
 

@@ -177,3 +177,5 @@ zipp
 zstandard
 selenium
 undetected_chromedriver
+fastapi
+uvicorn

@@ -13,10 +13,11 @@ TECH_KEYWORDS = [
 # "Registered Nurse (RN)", "Licensed Practical Nurse (LPN)", "Licensed Vocational Nurse (LVN)", "Certified Nursing Assistant (CNA)", "Nurse Technician", "Staff Nurse", "Charge Nurse", "Travel Nurse", "Float Nurse", "Nurse Practitioner (NP)", "Clinical Nurse Specialist (CNS)", "Nurse Anesthetist (CRNA)", "Nurse Midwife (CNM)", "Emergency Room Nurse", "Intensive Care Unit (ICU) Nurse", "Operating Room (OR) Nurse", "Perioperative Nurse", "Pediatric Nurse", "Neonatal Nurse", "Oncology Nurse", "Cardiac Care Nurse", "Dialysis Nurse", "Hospice Nurse", "Psychiatric Nurse", "Mental Health Nurse", "Rehabilitation Nurse", "Geriatric Nurse", "Orthopedic Nurse", "Public Health Nurse", "Home Health Nurse", "School Nurse", "Occupational Health Nurse", "Case Management Nurse","ccma" "Telehealth Nurse", "Nurse Educator", "Nurse Manager", "Nurse Administrator", "Director of Nursing", "Chief Nursing Officer (CNO)"
     # # "wordpress developer", "shopify developer",
     # "react developer",
-    "vue.js developer", "angular developer", "javascript developer",
+    "vue.js developer", "angular developer", 
+    # "javascript developer",
 
-    "wordpress developer", "shopify developer", "react developer",
-    "vue.js developer", "angular developer", "javascript developer",
+    # "wordpress developer", "shopify developer", "react developer",
+    # "vue.js developer", "angular developer", "javascript developer",
 
     # "typescript developer", "html/css developer", "ui developer",
     # "ux/ui developer", "web designer", "interaction designer",

@@ -159,7 +159,6 @@ static async searchJobs(userId: string, searchTerm: string): Promise<(Job & Part
       const { data: jobsData, error: jobsError } = await jobQuery;
       if (jobsError) throw jobsError;
 
-      // Get user status
       const jobIds = jobsData?.map((job) => job.id) || [];
       const { data: statusData, error: statusError } = await supabase
         .from("user_job_status")
@@ -173,7 +172,6 @@ static async searchJobs(userId: string, searchTerm: string): Promise<(Job & Part
         (statusData || []).map((status) => [status.job_id, status])
       );
 
-      // Combine data
       let combinedData = (jobsData || []).map((job) => ({
         ...job,
         user_job_status: statusMap.get(job.id) || null,
@@ -203,7 +201,6 @@ static async searchJobs(userId: string, searchTerm: string): Promise<(Job & Part
     }
   }
 
-  // 📊 Statistics 
   static async getJobStatistics(userId: string): Promise<{
     total: number;
     applied: number;
