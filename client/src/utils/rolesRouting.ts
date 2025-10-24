@@ -3,16 +3,16 @@ export type DatabaseRole = 'owner' | 'admin' | 'manager' | 'member' | 'user' | '
 export function getRoleDashboardPath(role: DatabaseRole | string, orgSlug: string): string {
   switch (role) {
     case 'owner':
-      return `/org/owner/${orgSlug}/dashboard`;
+      return `/org/${orgSlug}/owner/dashboard`;
     case 'admin':
-      return `/org/admin/${orgSlug}/dashboard`;
+      return `/org/${orgSlug}/admin/dashboard`;
     case 'manager':
-      return `/org/manager/${orgSlug}/dashboard`;
+      return `/org/${orgSlug}/manager/dashboard`;
     case 'member':
     case 'user':
-      return `/org/member/${orgSlug}/dashboard`;
+      return `/org/${orgSlug}/member/dashboard`;
     case 'recruiter':
-      return `/org/recruiter/${orgSlug}/dashboard`;
+      return `/org/${orgSlug}/recruiter/dashboard`;
     default:
       console.warn(`Unknown role: ${role}, redirecting to default dashboard`);
       return `/org/${orgSlug}/dashboard`;
@@ -34,7 +34,7 @@ export function getSystemRoleDashboardPath(
   }
   
   if (isOrgOwner && orgSlug) {
-    return `/org/owner/${orgSlug}/dashboard`;
+    return `/org/${orgSlug}/owner/dashboard`;
   }
   return '/dashboard';
 }

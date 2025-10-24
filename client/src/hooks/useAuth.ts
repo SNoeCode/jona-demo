@@ -16,7 +16,7 @@ import type {
   AuthUser,
   UserRole,
   OrganizationContext,
-} from "@/types/organization";
+} from "@/types/org/organization";
 import { supabase } from "@/lib/supabaseClient";
 
 interface AuthContextType {

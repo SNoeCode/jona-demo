@@ -26,7 +26,6 @@ export default function HandleOAuthRedirect() {
         return;
       }
 
-      // Only proceed if we have an auth code
       if (!authCode) {
         return;
       }
@@ -34,7 +33,6 @@ export default function HandleOAuthRedirect() {
       setIsProcessing(true);
       
       try {
-        // Let Supabase handle the OAuth flow automatically
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
 
         if (exchangeError) {
@@ -46,7 +44,6 @@ export default function HandleOAuthRedirect() {
         if (data?.session?.user) {
           console.log("✅ OAuth Session established");
           
-          // Get user role and redirect accordingly
           const role = data.session.user.user_metadata?.role || 
                       data.session.user.app_metadata?.role || 'user';
           
@@ -67,7 +64,7 @@ export default function HandleOAuthRedirect() {
     handleRedirect();
   }, [router]);
 
-  // Show loading state only if we're actually processing OAuth
+
   if (isProcessing) {
     return (
       <div className="fixed inset-0 bg-white flex items-center justify-center">

@@ -1,10 +1,8 @@
-# app/routers/scraper_router/indeed_route.py
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from fastapi import APIRouter, Query, HTTPException
 from datetime import datetime
 import time
-
 from app.utils.skills_engine import (
     load_all_skills,
     extract_flat_skills,
@@ -16,14 +14,9 @@ from app.scrapers.indeed_crawler import scrape_indeed_jobs
 from app.utils.write_jobs import write_jobs_csv
 from app.config.config_utils import get_output_folder
 
-# Load skills once at module level
 SKILLS = load_all_skills()
 
-# Create router
 router = APIRouter()
-
-
-# Request model for POST endpoint
 class IndeedScraperRequest(BaseModel):
     location: str = "remote"
     days: int = 15
@@ -31,9 +24,6 @@ class IndeedScraperRequest(BaseModel):
     debug: bool = False
     priority: str = "medium"
     max_results: int = 100
-
-
-# Response model
 class IndeedScraperResponse(BaseModel):
     success: bool
     jobs_found: int
@@ -61,18 +51,27 @@ async def run_indeed_scraper(request: IndeedScraperRequest) -> Dict:
     start_time = time.time()
     
     try:
-        # Run both scrapers
-        indeed_scraper_jobs = scrape_indeed(request.location, request.days)
-        indeed_crawler_jobs = scrape_indeed_jobs(request.location, request.days)
+        indeed_scraper_jobs = await scrape_indeed(
+            keywords=request.keywords if request.keywords else None,
+            location=request.location,
+            days=request.days,
+            max_results=request.max_results
+        )
         
-        # Get output folder
+        indeed_crawler_jobs = scrape_indeed_jobs(
+            location=request.location,
+            days=request.days,
+            keywords=request.keywords if request.keywords else None,
+            max_results=request.max_results
+        )
+        
         folder = get_output_folder()
-        
-        # Write results to CSV with correct parameter name
+        if not folder.exists():
+            folder.mkdir(parents=True, exist_ok=True)
+            
         write_jobs_csv(indeed_scraper_jobs, label="indeed_scraper")
         write_jobs_csv(indeed_crawler_jobs, label="indeed_crawler")
-        
-        # Calculate totals
+
         total_jobs_found = len(indeed_scraper_jobs) + len(indeed_crawler_jobs)
         duration = time.time() - start_time
         
@@ -88,7 +87,6 @@ async def run_indeed_scraper(request: IndeedScraperRequest) -> Dict:
         
     except Exception as e:
         duration = time.time() - start_time
-        
         return {
             "success": False,
             "jobs_found": 0,
@@ -111,10 +109,7 @@ async def run_indeed_scraper_get(
     GET version of the Indeed scraper endpoint.
     Converts query parameters to request model and calls the main scraper.
     """
-    # Convert comma-separated keywords to list
     keyword_list = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
-    
-    # Create request object
     request = IndeedScraperRequest(
         location=location,
         days=days,
@@ -122,7 +117,6 @@ async def run_indeed_scraper_get(
         debug=debug
     )
     
-    # Call the main scraper function
     return await run_indeed_scraper(request)
 
 

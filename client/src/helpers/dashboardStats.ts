@@ -3,7 +3,7 @@ import { AdminDashboardStats } from "@/types/admin/admin_dashboard";
 import { AdminUser } from "@/types/admin/admin_authuser";
 
 import { AuthUser, JobApplication, Resume, Job } from "@/types/user/index";
-import type { UserRole } from "@/types/organization"; // or wherever UserRole is defined
+import type { UserRole } from "@/types/org/organization"; // or wherever UserRole is defined
 
 // Convert AuthUser → AdminUser
 export const toAdminUser = (user: AuthUser): AdminUser => ({

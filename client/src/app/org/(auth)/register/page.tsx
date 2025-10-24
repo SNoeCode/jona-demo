@@ -155,8 +155,8 @@ export default function OrgRegisterPage() {
 
       console.log('✅ Organization created:', result.organization.slug);
 
-      // Redirect to organization dashboard
-      router.push(`/org/${result.organization.slug}/dashboard`);
+      // Redirect to organization dashboard (user is the owner)
+      router.push(`/org/${result.organization.slug}/owner/dashboard`);
       
     } catch (err: any) {
       console.error('Registration error:', err);

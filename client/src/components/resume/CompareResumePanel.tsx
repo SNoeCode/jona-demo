@@ -1,12 +1,12 @@
 "use client";
 import { AuthUser } from "@/types/user/index";
-import type { Resume } from "@/types/user/index"; // ✅ adjust path if needed
+import type { Resume } from "@/types/user/index";
 import React, { useState, useEffect } from "react";
 import { useApplicationTracker } from "../../hooks/useApplicationTracker";
 
 
 export interface CompareResumePanelProps {
-   resume: Resume;
+  resume: Resume;
   resumeText: string;
   resumeId: string;
   authUser: AuthUser;
@@ -24,7 +24,6 @@ interface JobMatch {
 
 export const CompareResumePanel: React.FC<CompareResumePanelProps> = ({
   resumeText,
-  
   resumeId,
   authUser,
   engine = "native",
@@ -95,15 +94,15 @@ export const CompareResumePanel: React.FC<CompareResumePanelProps> = ({
       const result = await response.json();
       setJobStatusMap((prev) => ({ ...prev, [jobId]: "success" }));
 
- addSubmission({
-  id: jobId,
-  job_id: jobId,
-  user_id: authUser.id,
-  job_title: jobTitle,
-  company,
-  submittedTo: result.submitted_to,
-  resumeLength: result.resume_length,
-});
+      addSubmission({
+        id: jobId,
+        job_id: jobId,
+        user_id: authUser.id,
+        job_title: jobTitle,
+        company,
+        submittedTo: result.submitted_to,
+        resumeLength: result.resume_length,
+      });
       alert(`📨 Resume sent to ${jobTitle} at ${company}`);
     } catch {
       setJobStatusMap((prev) => ({ ...prev, [jobId]: "error" }));
@@ -146,7 +145,7 @@ export const CompareResumePanel: React.FC<CompareResumePanelProps> = ({
             {topJobs.map((job) => (
               <li key={job.id} className="border p-4 rounded">
                 <h4 className="font-semibold">
-                {job.title ?? "Untitled"} @ {job.company ?? "Unknown"}
+                  {job.title ?? "Untitled"} @ {job.company ?? "Unknown"}
                 </h4>
                 <p className="text-sm text-gray-600">
                   Match Score: <strong>{job.match_score ?? "N/A"}</strong>

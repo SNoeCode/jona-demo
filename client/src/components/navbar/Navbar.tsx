@@ -17,7 +17,7 @@ import { Switch } from "@headlessui/react";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth} from "@/context/AuthUserContext";
 import { getOrgRole } from "@/services/organization/getOrgRole";
-import type { Organization } from "@/types/organization";
+import type { Organization } from "@/types/org/organization";
 import type { AuthUser } from "@/types/user/authUser";
 interface OrgAuthResult {
   user: AuthUser;  
@@ -70,6 +70,8 @@ const isTenantOwner = role === "tenant_owner";
 const isOrgOwner = role === "owner";
 const isOrgManager = role === "manager";
 const isOrgUser = role === "member";
+const isRegularUser = role === "user" || role === "unassigned_user";
+const isRecruiter = role === "recruiter";
 
   const hasOrganization = !!user?.organizations?.length;
 
@@ -84,7 +86,14 @@ const isOrgUser = role === "member";
   };
 
   const handleOrgDashboardClick = () => {
-    router.push("/org/dashboard");
+    // Get the current organization and role to build the correct URL
+    if (organization && user) {
+      const orgSlug = organization.organization.slug;
+      const userRole = organization.membership.role;
+      router.push(`/org/${orgSlug}/${userRole}/dashboard`);
+    } else {
+      router.push("/org/select");
+    }
     setIsMenuOpen(false);
   };
 
@@ -98,9 +107,21 @@ const isOrgUser = role === "member";
     setIsMenuOpen(false);
   };
 
+  const handleRecruiterDashboardClick = () => {
+    router.push("/recruit");
+    setIsMenuOpen(false);
+  };
+
   const handleSettingsClick = () => {
     if (hasOrganization && (isOrgOwner || isOrgManager)) {
-      router.push("/org/settings");
+      // Use the correct organization settings URL
+      if (organization) {
+        const orgSlug = organization.organization.slug;
+        const userRole = organization.membership.role;
+        router.push(`/org/${orgSlug}/${userRole}/settings`);
+      } else {
+        router.push("/org/select");
+      }
     } else if (isAdmin) {
       router.push("/admin/settings");
     }
@@ -164,6 +185,8 @@ const isOrgUser = role === "member";
         handleAdminDashboardClick();
       } else if (isTenantOwner) {
         handleTenantDashboardClick();
+      } else if (isRecruiter) {
+        handleRecruiterDashboardClick();
       } else if (hasOrganization) {
         handleOrgDashboardClick();
       } else {
@@ -176,6 +199,7 @@ const isOrgUser = role === "member";
 
   // Render navigation based on role and context
   const renderNavItems = () => {
+    // System Admin
     if (isAdmin) {
       return (
         <>
@@ -197,6 +221,7 @@ const isOrgUser = role === "member";
       );
     }
 
+    // Tenant Owner
     if (isTenantOwner) {
       return (
         <>
@@ -211,12 +236,35 @@ const isOrgUser = role === "member";
       );
     }
 
+    // Recruiter
+    if (isRecruiter) {
+      return (
+        <>
+          <button
+            onClick={handleRecruiterDashboardClick}
+            className={navLinkClass("/recruit")}
+          >
+            <Search className="w-4 h-4 inline mr-2" />
+            Recruiter Dashboard
+          </button>
+          <button
+            onClick={handleProfileClick}
+            className={navLinkClass("/profile")}
+          >
+            <User className="w-4 h-4 inline mr-2" />
+            Profile
+          </button>
+        </>
+      );
+    }
+
+    // Organization Users (Owner, Manager, Member)
     if (hasOrganization && (isOrgOwner || isOrgManager || isOrgUser)) {
       return (
         <>
           <button
             onClick={handleOrgDashboardClick}
-            className={navLinkClass("/org/dashboard")}
+            className={navLinkClass(organization ? `/org/${organization.organization.slug}/${organization.membership.role}/dashboard` : "/org/dashboard")}
           >
             <Building2 className="w-4 h-4 inline mr-2" />
             Organization
@@ -224,7 +272,7 @@ const isOrgUser = role === "member";
           {(isOrgOwner || isOrgManager) && (
             <button
               onClick={handleSettingsClick}
-              className={navLinkClass("/org/settings")}
+              className={navLinkClass(organization ? `/org/${organization.organization.slug}/${organization.membership.role}/settings` : "/org/settings")}
             >
               <Settings className="w-4 h-4 inline mr-2" />
               Settings
@@ -241,6 +289,7 @@ const isOrgUser = role === "member";
       );
     }
 
+    // Regular authenticated users (no organization)
     if (isAuthenticated) {
       return (
         <>
@@ -262,6 +311,7 @@ const isOrgUser = role === "member";
       );
     }
 
+    // Not authenticated
     return null;
   };
 
@@ -371,12 +421,20 @@ const isOrgUser = role === "member";
                   >
                     {user.user_metadata?.full_name || user.email}
                   </span>
-                  {isAdmin && <Shield className="w-4 h-4 text-red-500" />}
+                  {/* Role indicators */}
+                  {isAdmin && <Shield className="w-4 h-4 text-red-500" title="System Admin" />}
+                  {isTenantOwner && <Building2 className="w-4 h-4 text-purple-500" title="Tenant Owner" />}
+                  {isRecruiter && <Search className="w-4 h-4 text-green-500" title="Recruiter" />}
                   {hasOrganization && (
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       {user?.organizations?.[0]?.organizations?.name ??
                         user?.organizations?.[0]?.organizations?.slug ??
                         "Organization"}
+                      {organization && (
+                        <span className="ml-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 py-0.5 rounded">
+                          {organization.membership.role}
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>

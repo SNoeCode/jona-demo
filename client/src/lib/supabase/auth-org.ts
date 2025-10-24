@@ -24,9 +24,12 @@ export async function requireOrgAuth(organizationSlug: string): Promise<OrgAuthR
   
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
+  console.log('🔐 Checking org data: user', user);
   if (authError || !user) {
     console.log('❌ No authenticated user for org access');
+    console.log('🔍 Server user:', user);
+
+
     redirect(`/login?redirect=/org/${organizationSlug}`);
   }
   
@@ -168,7 +171,7 @@ import type {
   Organization,
   OrganizationMember,
   UserRole,
-} from "@/types/organization";
+} from "@/types/org/organization";
 
 export async function fetchOrganizationForUser(
   userId: string

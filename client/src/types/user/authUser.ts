@@ -1,5 +1,5 @@
 import type { User, Session } from "@supabase/supabase-js";
-import { OrganizationMember } from "../organization";
+import { OrganizationMember } from "../org/organization";
 
 // Supabase primitives
 export type SupabaseUser = User;

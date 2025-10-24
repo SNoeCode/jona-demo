@@ -14,7 +14,7 @@ import type {
   UserRole,
   OrganizationContext,
   OrganizationMember,
-} from "@/types/organization";
+} from "@/types/org/organization";
 import { supabase } from "@/lib/supabaseClient";
 import { getPrimaryRole } from "@/utils/roleUtils";
 
@@ -451,7 +451,10 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (response.ok) {
         await checkUser();
-        router.push("/org/dashboard");
+        // After switching organizations, redirect to the appropriate dashboard
+        // The checkUser function will set the current organization and role
+        // We'll let the user be redirected by the auth system
+        window.location.reload();
       } else {
         const errorText = await response.text();
         console.error("Failed to switch organization:", response.status, errorText);

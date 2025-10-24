@@ -6,7 +6,7 @@ import type {
   Organization,
   OrganizationMember,
   UserRole,
-} from "@/types/organization";
+} from "@/types/org/organization";
 
 export async function fetchOrganizationForUser(
   userId: string

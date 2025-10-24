@@ -11,7 +11,8 @@ const SCRAPER_CONFIG = {
   RATE_LIMIT_PER_HOUR: parseInt(process.env.SCRAPER_RATE_LIMIT || "10"),
 };
 
-const FASTAPI_BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
+// ✅ FIXED: Use correct environment variable name
+const FASTAPI_BASE_URL = process.env.FASTAPI_URL || 'http://127.0.0.1:8000';
 
 // Map frontend scraper names to FastAPI endpoints
 const SCRAPER_ENDPOINT_MAP: Record<string, string> = {
@@ -28,7 +29,6 @@ const SCRAPER_ENDPOINT_MAP: Record<string, string> = {
   'zip-playwright': 'zip-playwright',
 };
 
-
 export async function POST(
   request: NextRequest,
   { params }: { params: { scraper: string } }
@@ -39,7 +39,7 @@ export async function POST(
     const scraperType = params.scraper;
     console.log(`🔐 Authenticating for ${scraperType} scraper...`);
 
-    // ✅ Try to validate admin, but fallback to cookie check
+    // ✅ FIXED: Single authentication block
     let adminUser;
     try {
       adminUser = await validateAdminAuth(request);
@@ -56,8 +56,7 @@ export async function POST(
         console.log('✅ Found auth cookie, allowing request');
         adminUser = { 
           id: 'authenticated-user', 
-          email: 'user@domain.com',
-          role: 'user' 
+          email: 'admin@admin.com'
         };
       } else {
         console.error('❌ No authentication found');
@@ -135,20 +134,6 @@ export async function POST(
     logId = logData.id;
     console.log(`✅ Created log: ${logId}`);
     
-    
-    type MinimalUser = { id: string; email: string };
-
-    // Declare and assign authCookie before using it
-    const cookieStore = cookies();
-    const authCookie = cookieStore.get('sb-access-token') || cookieStore.get('supabase-auth-token');
-
-    if (authCookie) {
-      console.log('✅ Found auth cookie, allowing request');
-      adminUser = { id: 'authenticated-user', email: 'user@domain.com' } as MinimalUser;
-    } else {
-      console.error('❌ No authentication found');
-      return createErrorResponse('Authentication required', 401);
-    }
     // Create audit log (ignore errors)
     try {
       await supabaseAdmin.from("admin_audit_logs").insert({
@@ -165,11 +150,15 @@ export async function POST(
       console.warn('⚠️ Audit log failed (non-critical):', auditError);
     }
 
+    if (!logId) {
+      throw new Error("Failed to create log ID");
+    }
+
     // Run scraper via FastAPI
     const scraperResult = await runScraperViaFastAPI(
       scraperType,
       scraperRequest,
-      logId as string,
+      logId,
       adminUser
     );
 
@@ -204,6 +193,7 @@ async function runScraperViaFastAPI(
 
     const payload = {
       location: config.location || 'remote',
+      days: config.days || 15,
       keywords: config.keywords || [],
       debug: config.debug || false,
       priority: config.priority || 'medium',
@@ -212,10 +202,10 @@ async function runScraperViaFastAPI(
       skip_captcha: config.skip_captcha ?? true,
     };
 
-    console.log(`📤 FastAPI payload for ${scraperType}:`, payload);
+    console.log(`📤 FastAPI payload for ${scraperType}:`, JSON.stringify(payload, null, 2));
 
     const fastApiUrl = `${FASTAPI_BASE_URL}/scrapers/${endpoint}/run`;
-    console.log(`🔗 Calling: ${fastApiUrl}`);
+    console.log(`🔗 Calling FastAPI: ${fastApiUrl}`);
 
     const response = await fetch(fastApiUrl, {
       method: 'POST',
@@ -226,19 +216,18 @@ async function runScraperViaFastAPI(
       signal: AbortSignal.timeout(SCRAPER_CONFIG.TIMEOUT_MS),
     });
 
-    console.log(`📡 FastAPI response for ${scraperType}: ${response.status}`);
+    console.log(`📡 FastAPI response status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`
-      }));
-      throw new Error(errorData.message || errorData.error || 'FastAPI request failed');
+      const errorText = await response.text();
+      console.error(`❌ FastAPI error response:`, errorText);
+      throw new Error(`FastAPI error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log(`✅ FastAPI result for ${scraperType}:`, result);
+    console.log(`✅ FastAPI result for ${scraperType}:`, JSON.stringify(result, null, 2));
 
-    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    const durationSeconds = result.duration_seconds || Math.round((Date.now() - startTime) / 1000);
     const isSuccess = result.success === true;
 
     // Update database
@@ -247,23 +236,24 @@ async function runScraperViaFastAPI(
       isSuccess,
       result.jobs_found || 0,
       result.jobs_saved || result.jobs_found || 0,
-      result.duration_seconds || durationSeconds,
-      result.error_details || '',
+      durationSeconds,
+      result.error_details || result.message || '',
       adminUser
     );
 
     // Update user usage if jobs were saved
-    if (result.jobs_saved > 0 && config.user_id) {
+    if ((result.jobs_saved || 0) > 0 && config.user_id) {
       await incrementUserUsage(config.user_id, result.jobs_saved);
     }
 
     return {
       success: isSuccess,
       output: result.message,
+      message: result.message,
       error: isSuccess ? undefined : result.error_details || result.message,
       jobs_found: result.jobs_found || 0,
       jobs_saved: result.jobs_saved || result.jobs_found || 0,
-      duration_seconds: result.duration_seconds || durationSeconds,
+      duration_seconds: durationSeconds,
       log_id: logId,
       scraper_name: scraperType,
     };
@@ -277,6 +267,7 @@ async function runScraperViaFastAPI(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
+      message: error instanceof Error ? error.message : "Unknown error",
       jobs_found: 0,
       jobs_saved: 0,
       duration_seconds: durationSeconds,
@@ -308,6 +299,8 @@ async function updateFinalScrapingStatus(
         error_message: errorOutput || (isSuccess ? null : "Process failed"),
       })
       .eq("id", logId);
+    
+    console.log(`✅ Updated scraping log ${logId}: ${isSuccess ? 'completed' : 'failed'}`);
   } catch (error) {
     console.error(`Failed to update status for ${logId}:`, error);
   }
@@ -324,6 +317,8 @@ async function updateScrapingLogOnError(logId: string, error: any) {
         error_message: error instanceof Error ? error.message : "Unknown error",
       })
       .eq("id", logId);
+    
+    console.log(`✅ Updated error status for ${logId}`);
   } catch (updateError) {
     console.error(`Failed to update error for ${logId}:`, updateError);
   }
@@ -349,169 +344,3 @@ function getClientIP(request: NextRequest): string {
     "unknown"
   );
 }
-// // client/src/app/api/scraper/[scraper]/route.ts
-// import { NextRequest, NextResponse } from "next/server";
-// import { validateAdminAuth } from "@/lib/supabase/admin";
-// import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-
-// const FASTAPI_BASE_URL = process.env.FASTAPI_URL || "http://127.0.0.1:8000";
-
-// export async function POST(
-//   request: NextRequest,
-//   { params }: { params: { scraper: string } }
-// ) {
-//   let logId: string | null = null;
-
-//   try {
-//     // Validate admin authentication
-//     const adminUser = await validateAdminAuth(request);
-//     if (!adminUser) {
-//       return NextResponse.json(
-//         { error: "Admin access required" },
-//         { status: 403 }
-//       );
-//     }
-
-//     const scraperType = params.scraper;
-//     const body = await request.json();
-
-//     // Create scraping log in Supabase
-//     const supabaseAdmin = await getSupabaseAdmin();
-//     const { data: logData, error: logError } = await supabaseAdmin
-//       .from("scraping_logs")
-//       .insert({
-//         status: "running",
-//         jobs_found: 0,
-//         jobs_saved: 0,
-//         sites_scraped: [scraperType],
-//         keywords_used: body.keywords || [],
-//         location: body.location || "remote",
-//         started_at: new Date().toISOString(),
-//         user_id: adminUser.id,
-//         admin_initiated: true,
-//         admin_user_id: adminUser.id,
-//         scraper_type: scraperType,
-//       })
-//       .select()
-//       .single();
-
-//     if (logError) {
-//       throw new Error(`Failed to create scraping log: ${logError.message}`);
-//     }
-
-//     logId = logData.id;
-
-//     // Create audit log
-//     await supabaseAdmin.from("admin_audit_logs").insert({
-//       admin_user_id: adminUser.id,
-//       admin_email: adminUser.email || "",
-//       action: `${scraperType}_scraper_started`,
-//       entity_type: "scraper",
-//       entity_id: logId,
-//       new_values: body,
-//       ip_address: getClientIP(request),
-//       user_agent: request.headers.get("user-agent") || "unknown",
-//     });
-
-//     // Forward request to FastAPI
-//     const fastApiResponse = await fetch(
-//       `${FASTAPI_BASE_URL}/scrapers/${scraperType}/run`,
-//       {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify({
-//           location: body.location,
-//           days: body.days,
-//           keywords: body.keywords,
-//           debug: body.debug,
-//           priority: body.priority,
-//           max_results: body.max_results,
-//           log_id: logId, // Pass the log ID to FastAPI
-//         }),
-//       }
-//     );
-
-//     if (!fastApiResponse.ok) {
-//       const errorText = await fastApiResponse.text();
-//       throw new Error(`FastAPI error: ${errorText}`);
-//     }
-
-//     const result = await fastApiResponse.json();
-
-//     // Update scraping log with results
-//     const finalStatus = result.success ? "completed" : "failed";
-//     await supabaseAdmin
-//       .from("scraping_logs")
-//       .update({
-//         status: finalStatus,
-//         jobs_found: result.jobs_found || 0,
-//         jobs_saved: result.jobs_saved || result.jobs_found || 0,
-//         completed_at: new Date().toISOString(),
-//         duration_seconds: result.duration_seconds,
-//         error_message: result.error || null,
-//       })
-//       .eq("id", logId);
-
-//     // Create completion audit log
-//     await supabaseAdmin.from("admin_audit_logs").insert({
-//       admin_user_id: adminUser.id,
-//       admin_email: adminUser.email || "",
-//       action: result.success
-//         ? `${scraperType}_scraper_completed`
-//         : `${scraperType}_scraper_failed`,
-//       entity_type: "scraper",
-//       entity_id: logId,
-//       new_values: {
-//         jobs_found: result.jobs_found || 0,
-//         jobs_saved: result.jobs_saved || result.jobs_found || 0,
-//         status: finalStatus,
-//       },
-//     });
-
-//     return NextResponse.json({
-//       success: result.success,
-//       scraper_name: scraperType,
-//       jobs_count: result.jobs_found || 0,
-//       jobs_found: result.jobs_found || 0,
-//       duration_seconds: result.duration_seconds,
-//       message: result.message,
-//       log_id: logId,
-//     });
-//   } catch (error) {
-//     console.error(`Scraper error:`, error);
-
-//     // Update scraping log on error
-//     if (logId) {
-//       const supabaseAdmin = await getSupabaseAdmin();
-//       await supabaseAdmin
-//         .from("scraping_logs")
-//         .update({
-//           status: "failed",
-//           completed_at: new Date().toISOString(),
-//           error_message:
-//             error instanceof Error ? error.message : "Unknown error",
-//         })
-//         .eq("id", logId);
-//     }
-
-//     return NextResponse.json(
-//       {
-//         success: false,
-//         error: error instanceof Error ? error.message : "Unknown error",
-//         log_id: logId,
-//       },
-//       { status: 500 }
-//     );
-//   }
-// }
-
-// function getClientIP(request: NextRequest): string {
-//   return (
-//     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-//     request.headers.get("x-real-ip") ||
-//     "unknown"
-//   );
-// }
-

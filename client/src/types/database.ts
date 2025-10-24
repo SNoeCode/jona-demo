@@ -23,7 +23,7 @@ import {
   OrganizationUsage,
   OrganizationAuditLog,
   Tenant,
-} from "@/types/organization";
+} from "@/types/org/organization";
 import { AdminJob } from "@/types/admin/admin_jobs";
 import { AdminResume } from "@/types/admin/admin_resume";
 import { AdminSubscriptionData } from "@/types/admin/admin_subscription";
