@@ -40,12 +40,6 @@ export default function ApplicationsSentPanel({
   }, [jobs]);
 
   const getJobDetails = (jobId: string) => jobMap.get(jobId.toString());
-
-  // const getJobDetails = (jobId: string) => {
-  //   return jobs.find((job) => job.id === jobId);
-  // };
-  // const getJobDetails = (jobId: string) =>
-  // jobs.find(job => job.id.toString() === jobId.toString());
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("en-US", {
       timeZone: "America/New_York", // or whatever timezone you want

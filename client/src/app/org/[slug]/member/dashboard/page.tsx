@@ -2,7 +2,7 @@
 import { requireOrgAuth } from '@/lib/supabase/auth-org';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import MemberDashboardClient from './MemberDashboardClient'; // ensure file exists and exports default
+import MemberDashboardClient from './dashboard/MemberDashboardClient'; // ensure file exists and exports default
 import { getOrgRole } from '@/services/organization/getOrgRole';
 
 async function getMemberDashboardData(orgId: string, userId: string) {

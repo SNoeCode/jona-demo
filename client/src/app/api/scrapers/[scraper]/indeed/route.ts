@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
 
 
-    const body = await request.json().catch(() => ({}));
+  const body = await request.json().catch(() => ({}));
   const scraperRequest: ScraperRequest = {
   ...validateScraperRequest(body), // returns partial
   id: crypto.randomUUID(),
@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
   admin_user_id: adminUser.id,
   admin_email: adminUser.email,
   sites: ['dice'],
+  headless: body.headless ?? true, // Add default value for headless
+  skip_captcha: typeof body.skip_captcha === 'boolean' ? body.skip_captcha : false,
 };
     const supabaseAdmin = await getSupabaseAdmin();
     const { data: logData, error: logError } = await supabaseAdmin

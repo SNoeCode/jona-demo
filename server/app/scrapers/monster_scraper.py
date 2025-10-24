@@ -22,6 +22,8 @@ def scrape_monster_jobs(location=LOCATION, pages=PAGES_PER_KEYWORD):
     base_url = "https://www.monster.com"
     all_jobs = []
     driver = configure_driver()
+    if not driver:
+        raise RuntimeError("Failed to configure WebDriver")
 
     # Trigger verification once
     driver.get(f"{base_url}/jobs/search?q=software+engineer&where={location}")

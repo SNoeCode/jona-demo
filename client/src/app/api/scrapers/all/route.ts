@@ -2,8 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAdminAuth, createAuthResponse } from '@/lib/supabase/admin';
 import { createErrorResponse, createSuccessResponse, checkRateLimit } from '@/utils/api-utils';
-
-// import {validateScraperRequest}from "@/type/admin"
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import type { ScraperRequest } from '@/types/admin';
 import { scraperApiClient } from '@/services/scraperApiClient'
@@ -34,6 +32,8 @@ export function validateScraperRequest(body: any): ScraperRequest {
     admin_user_id: body.admin_user_id,
     admin_email: body.admin_email,
     options: body.options || {},
+    headless: body.headless ?? true,
+    skip_captcha: body.skip_captcha ?? false,
   };
 }
 

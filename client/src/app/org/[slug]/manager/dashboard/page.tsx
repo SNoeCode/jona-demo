@@ -2,7 +2,7 @@
 import { requireOrgAuth } from '@/lib/supabase/auth-org';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import ManagerDashboardClient from './ManagerDashboardClient';
+import ManagerDashboardClient from './dashboard/ManagerDashboardClient';
 
 async function getManagerDashboardData(orgId: string, userId: string) {
   const supabase = await createClient();

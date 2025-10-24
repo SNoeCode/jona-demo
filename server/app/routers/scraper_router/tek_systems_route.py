@@ -33,8 +33,8 @@ def run_teksystems(location: str = Query("remote"), days: int = Query(15)) -> Di
         job["skills_by_category"] = extract_skills_by_category(text, SKILLS["matrix"])
         job["skills"] = job["flat_skills"]
 
-    write_jobs_csv(teksystems_jobs, scraper="teksystems_scraper")
-    return {
+        write_jobs_csv(job, folder_name="job_data", label="tek_systems")
+        return {
         "teksystems_scraper": len(teksystems_jobs),
         "status": "TekSystems complete"
     }

@@ -1,7 +1,7 @@
 // services/fastapi-client.ts
 "use server";
 
-import type { ScraperRequest, ScraperResponse, ScraperType, ScraperMetadata } from "@/types/scraper";
+import type { ScraperRequest, ScraperResponse, ScraperType, ScraperMetadata } from "@/types/org/scraper";
 
 const FASTAPI_BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
 

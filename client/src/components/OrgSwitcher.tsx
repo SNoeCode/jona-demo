@@ -9,12 +9,12 @@ export function OrgSwitcher() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!user || user.organizations.length === 0) {
+  if (!user || !user.organizations || user.organizations.length === 0) {
     return null;
   }
 
-  const handleOrgSwitch = (orgSlug: string) => {
-    router.push(`/org/${orgSlug}/dashboard`);
+  const handleOrgSwitch = (orgSlug: string, role: string) => {
+    router.push(`/org/${orgSlug}/${role}/dashboard`);
     setIsOpen(false);
   };
 
@@ -51,11 +51,11 @@ export function OrgSwitcher() {
               {user.organizations.map((org) => (
                 <button
                   key={org.id}
-                  onClick={() => handleOrgSwitch(org.slug)}
+                  onClick={() => handleOrgSwitch(org.organizations?.slug || '', org.role)}
                   className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
                 >
                   <div className="flex flex-col items-start">
-                    <span className="font-medium">{org.name}</span>
+                      <span className="font-medium">{org.organizations?.name || 'Unknown'}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {org.role}
                     </span>

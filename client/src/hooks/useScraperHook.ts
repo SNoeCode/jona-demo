@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { ScraperRequest, ScraperResponse, ScrapingLog, ScraperStats, ScraperType } from "@/types/scraper";
+import type { ScraperRequest, ScraperResponse, ScrapingLog, ScraperStats, ScraperType } from "@/types/org/scraper";
 
 export function useScrapers() {
   const [isRunning, setIsRunning] = useState(false);

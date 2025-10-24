@@ -1,4 +1,4 @@
-import type { UserRole, OrgRole } from "@/types/organization";
+import type { UserRole, OrgRole } from "@/types/org/organization";
 import type { AuthUser } from "@/types/user/authUser";
 
 const ROLE_HIERARCHY: UserRole[] = [
@@ -131,9 +131,11 @@ export function getDefaultRouteForRole(role: UserRole, orgSlug?: string): string
     case 'tenant_owner':
       return '/tenant/dashboard'
     case 'org_admin':
+      return orgSlug ? `/org/${orgSlug}/admin/dashboard` : '/dashboard'
     case 'org_manager':
+      return orgSlug ? `/org/${orgSlug}/manager/dashboard` : '/dashboard'
     case 'org_user':
-      return orgSlug ? `/org/${orgSlug}/dashboard` : '/dashboard'
+      return orgSlug ? `/org/${orgSlug}/member/dashboard` : '/dashboard'
     case 'recruiter':
       return orgSlug ? `/org/${orgSlug}/recruit` : '/recruit'
     case 'unassigned_user':
